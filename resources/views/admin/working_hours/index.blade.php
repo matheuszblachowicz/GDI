@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.main')
 @section('title', 'Gestão de Horários')
 @section('header', 'Working Hours por Grupo (AD)')
 

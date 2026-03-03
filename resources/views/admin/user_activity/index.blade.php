@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.main')
 @section('title', 'Atividade dos Utilizadores')
 @section('header', 'Logs de Atividade')
 

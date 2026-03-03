@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.main')
 @section('title', 'Detalhes: ' . $device->hostname)
 @section('header', 'Detalhes da Máquina - ' . $device->hostname)
 
