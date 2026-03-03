@@ -1,6 +1,54 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AgentController;
+use App\Http\Controllers\LdapController;
+use App\Http\Controllers\AdminController;
 
-Route::post("/",[AgentController::class,"getApplications"]);
+// -------------------------------------------------------------------------
+// ROTAS DE AUTENTICAÇÃO (LDAP)
+// -------------------------------------------------------------------------
+
+// Exibe a view de login
+Route::get('/login', [LdapController::class, 'index'])->name('login');
+
+// Processa a tentativa de login no Active Directory
+Route::post('/login', [LdapController::class, 'authenticate'])->name('authenticate');
+
+// Encerra a sessão
+Route::post('/logout', [LdapController::class, 'logout'])->name('logout');
+
+
+// -------------------------------------------------------------------------
+// ROTAS PROTEGIDAS (Apenas para utilizadores autenticados)
+// -------------------------------------------------------------------------
+
+Route::middleware('auth')->group(function () {
+    
+    // Rotas raízes e redirecionamentos após login bem sucedido
+    Route::get('/home', [LdapController::class, 'home'])->name('home');
+    Route::get('/', function () { 
+        return redirect()->route('admin.home'); 
+    });
+
+    // ---------------------------------------------------------------------
+    // PAINEL DE ADMINISTRAÇÃO (Prefixo: /admin)
+    // ---------------------------------------------------------------------
+    Route::prefix('admin')->name('admin.')->group(function () {
+        
+        // Dashboard Inicial
+        Route::get('/', [AdminController::class, 'home'])->name('home');
+        
+        // Gestão de Dispositivos / Máquinas
+        Route::get('/devices', [AdminController::class, 'devices'])->name('devices.index');
+        Route::get('/devices/{id}', [AdminController::class, 'showDevice'])->name('devices.show');
+        Route::post('/devices/{id}/block', [AdminController::class, 'blockDevice'])->name('devices.block');
+        
+        // Gestão de Horários de Trabalho (Working Hours)
+        Route::get('/working-hours', [AdminController::class, 'workingHours'])->name('working_hours.index');
+        Route::post('/working-hours', [AdminController::class, 'storeWorkingHour'])->name('working_hours.store');
+
+        // Visualização da Atividade dos Utilizadores
+        Route::get('/user-activity', [AdminController::class, 'userActivity'])->name('user_activity.index');
+        
+    });
+});

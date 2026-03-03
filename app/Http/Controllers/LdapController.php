@@ -12,7 +12,7 @@ use Maatwebsite\Excel\Facades\Excel;
 class LdapController extends Controller
 {
     public function index(){
-        return view('ldap');
+        return view('login');
 
     }
 
@@ -20,20 +20,19 @@ class LdapController extends Controller
 
     public function authenticate(Request $request){
 
-      $username=$request->input('username');
-      $password=$request->input('password');
-      Auth::attempt(['samaccountname'=>$username,'password'=>$password]);
-      if(Auth::check()){
-        return redirect()->route('home');
+            $username = $request->input('username');
+            $password = $request->input('password');
 
-      }else{
+            // Tenta o login. Se falhar, o Auth::attempt retorna false.
+            if (Auth::attempt(['samaccountname' => $username, 'password' => $password])) {
+                return redirect()->route('admin.home');
+            } else {
+                // CORREÇÃO: Mude de 'ldap' para 'login'
+                return redirect()->route('login')->with('error', 'Credenciais inválidas ou erro de conexão com AD');
+            }
+    }
 
-        return redirect()->route('ldap')->with('error','Credenciais inválidas');
-      }
 
-
- 
-}
 
         public function logout()
         {
