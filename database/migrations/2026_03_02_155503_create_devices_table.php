@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('devices', function (Blueprint $table) {
             $table->id();
             $table->string('hostname')->unique();
+            $table->string('mac_address');
+            $table->string('os_version');
 
             $table->decimal('latitude', 10, 8)->nullable();
             $table->decimal('longitude', 11, 8)->nullable();

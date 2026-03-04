@@ -21,16 +21,18 @@ class AgentController extends Controller
         // Atualiza ou regista a máquina e a sua geolocalização
         $device = Device::updateOrCreate(
             ['hostname' => $data['hostname']],
-            [
+            [    
+                'mac_address'=>$data['mac_address'] ?? '00:00:00:00:00:00',
+                'os_version' => $data['os_version'] ?? 'Desconhecido',
                 'latitude' => $data['latitude'] ?? null,
                 'longitude' => $data['longitude'] ?? null,
-                'ip_address' => $request->ip(),
+                'ip_address' => $data['ip_address'] ?? $request->ip(),
                 'last_seen_at' => now(),
             ]
         );
         
         // Verifica se existe o termo de responsabilidade
-        $termo = Termo::where('hostname', $data['hostname'])
+        $termo = Termo::where('maquina', $data['hostname'])
                       ->where('cpf', $data['cpf'] ?? '')
                       ->first();
 

@@ -45,5 +45,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/working-hours', [AdminController::class, 'storeWorkingHour'])->name('working_hours.store');
 
         Route::get('/user-activity', [AdminController::class, 'userActivity'])->name('user_activity.index');
+
+        Route::get('/mapa', [AdminController::class, 'mapa'])->name('mapa');
     });
 });

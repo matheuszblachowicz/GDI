@@ -13,8 +13,8 @@ return new class extends Migration
             CREATE TABLE user_activity_logs (
                 id BIGINT UNSIGNED NOT NULL,
                 device_id BIGINT UNSIGNED NOT NULL,
-                username VARCHAR(255) NOT NULL,
-                event_type ENUM('login', 'logout', 'lock', 'unlock', 'idle_start', 'idle_end') NOT NULL,
+                username VARCHAR(100) NOT NULL,
+                event_type VARCHAR(100) NOT NULL,
                 active_window_title VARCHAR(255) NULL,
                 process_name VARCHAR(255) NULL,
                 event_at DATETIME NOT NULL,
