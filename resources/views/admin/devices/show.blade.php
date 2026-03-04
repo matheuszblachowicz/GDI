@@ -32,29 +32,24 @@
 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
     <div class="flex border-b border-slate-200">
         <button onclick="switchTab('apps')" id="tab-btn-apps" class="flex-1 py-4 text-center font-bold text-blue-600 border-b-2 border-blue-600 bg-blue-50/30 transition-all">Aplicações</button>
-        <button onclick="switchTab('web')" id="tab-btn-web" class="flex-1 py-4 text-center font-bold text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition-all">Histórico Web</button>
-        <button onclick="switchTab('actions')" id="tab-btn-actions" class="flex-1 py-4 text-center font-bold text-red-500 hover:text-red-600 hover:bg-red-50 transition-all border-l border-slate-200">Ações de Segurança</button>
+        <button onclick="switchTab('web')" id="tab-btn-web" class="flex-1 py-4 text-center font-bold text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition-all border-b border-transparent">Histórico Web</button>
+        <button onclick="switchTab('activity')" id="tab-btn-activity" class="flex-1 py-4 text-center font-bold text-slate-500 hover:text-blue-600 hover:bg-slate-50 transition-all border-b border-transparent">Atividade Geral</button>
+        <button onclick="switchTab('actions')" id="tab-btn-actions" class="flex-1 py-4 text-center font-bold text-red-500 hover:text-red-600 hover:bg-red-50 transition-all border-l border-slate-200 border-b border-transparent">Ações de Segurança</button>
     </div>
 
     <div class="p-8">
         <div id="tab-apps" class="block animate-fade-in">
-            <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-                Software Instalado
-            </h3>
+            <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">Software Instalado</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 @forelse($device->applications as $app)
-                    @php 
-                        // Verificação segura se a app é não autorizada
-                        $isUnauthorized = isset($unauthorizedApps) && $unauthorizedApps->contains('name', $app->name); 
-                    @endphp
+                    @php $isUnauthorized = isset($unauthorizedApps) && $unauthorizedApps->contains('name', $app->name); @endphp
                     <div class="p-4 rounded-xl border flex items-center justify-between {{ $isUnauthorized ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200' }}">
                         <div>
                             <span class="font-bold text-slate-800 block">{{ $app->name }}</span>
                             <span class="text-xs text-slate-500 font-mono">v{{ $app->version ?? 'N/A' }}</span>
                         </div>
                         @if($isUnauthorized)
-                            <span class="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-bold rounded shadow-sm border border-red-200">Não Autorizado</span>
+                            <span class="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-bold rounded border border-red-200">Não Autorizado</span>
                         @endif
                     </div>
                 @empty
@@ -64,11 +59,7 @@
         </div>
 
         <div id="tab-web" class="hidden animate-fade-in">
-            <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
-                Tráfego de Navegadores Recente
-            </h3>
-            
+            <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">Tráfego de Navegadores</h3>
             <div class="overflow-hidden border border-slate-200 rounded-xl">
                 <table class="w-full text-left text-sm text-slate-600">
                     <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-xs border-b border-slate-200">
@@ -76,27 +67,47 @@
                             <th class="px-4 py-3">Data / Hora</th>
                             <th class="px-4 py-3">Utilizador</th>
                             <th class="px-4 py-3">Browser</th>
-                            <th class="px-4 py-3">Título da Janela / Site</th>
+                            <th class="px-4 py-3">Site / Janela</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         @forelse($webHistory as $log)
                         <tr class="hover:bg-slate-50">
-                            <td class="px-4 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
-                                {{ $log->event_at ? \Carbon\Carbon::parse($log->event_at)->format('d/m/Y H:i:s') : 'N/A' }}
-                            </td>
+                            <td class="px-4 py-3 font-mono text-xs">{{ \Carbon\Carbon::parse($log->event_at)->format('d/m/Y H:i:s') }}</td>
                             <td class="px-4 py-3 font-medium">{{ $log->username }}</td>
-                            <td class="px-4 py-3">
-                                <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-bold capitalize">{{ str_replace('.exe', '', $log->process_name) }}</span>
-                            </td>
-                            <td class="px-4 py-3 text-slate-800 font-medium truncate max-w-md" title="{{ $log->active_window_title }}">
-                                {{ \Illuminate\Support\Str::limit($log->active_window_title, 60) }}
-                            </td>
+                            <td class="px-4 py-3"><span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-bold capitalize">{{ str_replace('.exe', '', $log->process_name) }}</span></td>
+                            <td class="px-4 py-3 truncate max-w-md" title="{{ $log->active_window_title }}">{{ \Illuminate\Support\Str::limit($log->active_window_title, 60) }}</td>
                         </tr>
                         @empty
+                        <tr><td colspan="4" class="px-4 py-8 text-center text-slate-500">Nenhum registo de navegação encontrado.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-activity" class="hidden animate-fade-in">
+            <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">Atividade Geral do Utilizador</h3>
+            <div class="overflow-hidden border border-slate-200 rounded-xl">
+                <table class="w-full text-left text-sm text-slate-600">
+                    <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-xs border-b border-slate-200">
                         <tr>
-                            <td colspan="4" class="px-4 py-8 text-center text-slate-500">Nenhum registo de navegação encontrado.</td>
+                            <th class="px-4 py-3">Data / Hora</th>
+                            <th class="px-4 py-3">Utilizador</th>
+                            <th class="px-4 py-3">Processo</th>
+                            <th class="px-4 py-3">Janela Ativa</th>
                         </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @forelse($activityLogs as $log)
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-4 py-3 font-mono text-xs">{{ \Carbon\Carbon::parse($log->event_at)->format('d/m/Y H:i:s') }}</td>
+                            <td class="px-4 py-3 font-medium">{{ $log->username }}</td>
+                            <td class="px-4 py-3 font-medium text-blue-600">{{ $log->process_name }}</td>
+                            <td class="px-4 py-3 truncate max-w-md" title="{{ $log->active_window_title }}">{{ \Illuminate\Support\Str::limit($log->active_window_title, 80) }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="4" class="px-4 py-8 text-center text-slate-500">Nenhum registo de atividade encontrado.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -105,27 +116,14 @@
 
         <div id="tab-actions" class="hidden animate-fade-in">
             <div class="max-w-2xl">
-                <h3 class="text-xl font-bold text-red-600 mb-2">Bloqueio Preventivo de Máquina</h3>
-                <p class="mb-6 text-slate-600 text-sm">Ao acionar esta restrição, o agente GDI irá bloquear o ecrã do utilizador imediatamente na próxima sincronização.</p>
-                
-                <form action="{{ route('admin.devices.block', $device->id) }}" method="POST" class="bg-red-50 p-6 rounded-xl border border-red-100">
+                <h3 class="text-xl font-bold text-red-600 mb-2">Bloqueio Preventivo</h3>
+                <form action="{{ route('admin.devices.block', $device->id) }}" method="POST" class="bg-red-50 p-6 rounded-xl border border-red-100 mt-4">
                     @csrf
                     <div class="mb-5">
                         <label class="block text-sm font-bold text-red-900 mb-2">Mensagem a exibir no ecrã bloqueado:</label>
-                        {{-- Correção do Erro de Array: Concatenação segura fora das chaves do Blade --}}
-                        @php
-                            $adminName = auth()->user()->name ?? 'Administração';
-                            if(is_array($adminName)) $adminName = 'Administração'; // Fallback caso seja array
-                            
-                            $defaultMessage = "O seu acesso foi temporariamente suspenso pelo departamento de T.I. Por favor, contacte o administrador (" . $adminName . ").";
-                        @endphp
-                        
-                        <textarea name="block_message" rows="3" class="w-full border-red-200 p-3 rounded-lg focus:ring-red-500 focus:border-red-500 shadow-sm" required>{{ $device->block_message ?? $defaultMessage }}</textarea>
+                        <textarea name="block_message" rows="3" class="w-full border-red-200 p-3 rounded-lg focus:ring-red-500 focus:border-red-500" required>{{ $device->block_message ?? 'Acesso temporariamente suspenso.' }}</textarea>
                     </div>
-                    <button type="submit" class="bg-red-600 text-white px-6 py-3 rounded-lg shadow-md hover:bg-red-700 hover:shadow-lg transition-all font-bold flex items-center justify-center w-full gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                        Bloquear Estação Agora
-                    </button>
+                    <button type="submit" class="bg-red-600 text-white px-6 py-3 rounded-lg font-bold w-full">Bloquear Estação Agora</button>
                 </form>
             </div>
         </div>
@@ -143,24 +141,19 @@
 @push('scripts')
 <script>
     function switchTab(tabName) {
-        // Ocultar todas
-        document.getElementById('tab-apps').classList.add('hidden');
-        document.getElementById('tab-web').classList.add('hidden');
-        document.getElementById('tab-actions').classList.add('hidden');
+        ['apps', 'web', 'activity', 'actions'].forEach(tab => {
+            document.getElementById('tab-' + tab).classList.add('hidden');
+            let btn = document.getElementById('tab-btn-' + tab);
+            btn.className = "flex-1 py-4 text-center font-bold transition-all text-slate-500 hover:text-blue-600 hover:bg-slate-50 border-b border-transparent " + (tab==='actions' ? 'border-l border-slate-200' : '');
+        });
         
-        // Reset botões
-        const baseClass = "flex-1 py-4 text-center font-bold transition-all ";
-        document.getElementById('tab-btn-apps').className = baseClass + "text-slate-500 hover:text-blue-600 hover:bg-slate-50 border-b border-transparent";
-        document.getElementById('tab-btn-web').className = baseClass + "text-slate-500 hover:text-blue-600 hover:bg-slate-50 border-b border-transparent";
-        document.getElementById('tab-btn-actions').className = baseClass + "text-red-500 hover:text-red-600 hover:bg-red-50 border-l border-slate-200 border-b border-transparent";
-
-        // Ativar selecionada
         document.getElementById('tab-' + tabName).classList.remove('hidden');
+        let activeBtn = document.getElementById('tab-btn-' + tabName);
         
         if(tabName === 'actions') {
-            document.getElementById('tab-btn-' + tabName).className = baseClass + "text-red-700 bg-red-50 border-b-2 border-red-600 border-l border-slate-200";
+            activeBtn.className = "flex-1 py-4 text-center font-bold transition-all text-red-700 bg-red-50 border-b-2 border-red-600 border-l border-slate-200";
         } else {
-            document.getElementById('tab-btn-' + tabName).className = baseClass + "text-blue-600 border-b-2 border-blue-600 bg-blue-50/30";
+            activeBtn.className = "flex-1 py-4 text-center font-bold transition-all text-blue-600 border-b-2 border-blue-600 bg-blue-50/30";
         }
     }
 </script>

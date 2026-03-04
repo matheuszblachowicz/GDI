@@ -8,77 +8,125 @@ use App\Models\Device;
 use App\Models\DeviceApplication;
 use App\Models\UserActivityLog;
 use App\Models\WorkingHour;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 class AgentController extends Controller
 {
-    // Verifica se a máquina tem o termo assinado e regista a sua localização
+    /**
+     * Valida Identidade, Localização e Bloqueio Manual
+     */
     public function verifyMachine(Request $request)
     {
         $data = $request->json()->all();
+        $lat = null; $lng = null;
 
-        // Atualiza ou regista a máquina e a sua geolocalização
+        // 1. GEOLOCALIZAÇÃO DINÂMICA (Wi-Fi Triangulation)
+        if (!empty($data['wifiAccessPoints'])) {
+            try {
+                $apiKey = env('GOOGLE_MAPS_KEY'); 
+                $response = Http::post("https://www.googleapis.com/geolocation/v1/geolocate?key={$apiKey}", [
+                    'wifiAccessPoints' => $data['wifiAccessPoints']
+                ]);
+
+                if ($response->successful()) {
+                    $loc = $response->json()['location'];
+                    $lat = $loc['lat'];
+                    $lng = $loc['lng'];
+                }
+            } catch (\Exception $e) {
+                Log::error("Erro Google Maps API: " . $e->getMessage());
+            }
+        }
+
+        // 2. REGISTRO/ATUALIZAÇÃO DO DISPOSITIVO
         $device = Device::updateOrCreate(
             ['hostname' => $data['hostname']],
             [    
-                'mac_address'=>$data['mac_address'] ?? '00:00:00:00:00:00',
-                'os_version' => $data['os_version'] ?? 'Desconhecido',
-                'latitude' => $data['latitude'] ?? null,
-                'longitude' => $data['longitude'] ?? null,
-                'ip_address' => $data['ip_address'] ?? $request->ip(),
-                'last_seen_at' => now(),
+                'mac_address' => $data['mac_address'] ?? '00:00:00:00:00:00',
+                'os_version'  => $data['os_version'] ?? 'Desconhecido',
+                'latitude'    => $lat,
+                'longitude'   => $lng,
+                'ip_address'  => $data['ip_address'] ?? "ip não enviado",
+                'last_seen_at'=> now(),
             ]
         );
+
+        // 3. BLOQUEIO MANUAL (Mensagem que vem da sua View de Device)
+        if ($device->is_blocked) {
+            return response()->json([
+                "allowed" => false, 
+                "action"  => "block", 
+                "message" => $device->block_message ?? "Acesso suspenso pelo administrador."
+            ]);
+        }
         
-        // Verifica se existe o termo de responsabilidade
+        // 4. BLOQUEIO POR TERMO DE RESPONSABILIDADE
         $termo = Termo::where('maquina', $data['hostname'])
                       ->where('cpf', $data['cpf'] ?? '')
                       ->first();
 
-        // Se existir o termo, permite; caso contrário, bloqueia
-        if ($termo) {
-            return response()->json(["allowed" => true, "action" => "allow"]);
-        } else {
-            return response()->json(["allowed" => false, "action" => "block"]);
+        if (!$termo) {
+            return response()->json([
+                "allowed" => false, 
+                "action"  => "block", 
+                "message" => "O termo de responsabilidade não foi assinado para este CPF."
+            ]);
         }
+
+        return response()->json(["allowed" => true, "action" => "allow"]);
     }
 
-    // Recebe a lista de programas instalados na máquina
-    public function getApplications(Request $request)
+    /**
+     * Valida Horário de Trabalho
+     */
+    public function checkWorkingHours(Request $request)
     {
-        $data = $request->json()->all();
-        
-        $device = Device::where('hostname', $data['hostname'] ?? '')->first();
+        $currentTime = now()->format('H:i:s');
+        $workingHours = WorkingHour::all();
 
-        if ($device && isset($data['applications'])) {
-            // Limpa as aplicações antigas para evitar dados duplicados
-            $device->applications()->delete();
+        if ($workingHours->count() > 0) {
+            $isAllowed = false;
+            foreach ($workingHours as $wh) {
+                if ($currentTime >= $wh->start_time && $currentTime <= $wh->end_time) {
+                    $isAllowed = true;
+                    break;
+                }
+            }
 
-            foreach ($data['applications'] as $app) {
-                $application = new DeviceApplication;
-                $application->device_id = $device->id;
-                $application->name = $app['Name'];
-                $application->version = $app['Version'] ?? 'Desconhecida';
-                $application->save();
+            if (!$isAllowed) {
+                return response()->json([
+                    "allowed" => false, 
+                    "action"  => "block", 
+                    "message" => "Fora do horário de expediente permitido pela Platlog."
+                ]);
             }
         }
-        
-        return response()->json(['message' => 'Aplicações sincronizadas com sucesso']);
+
+        return response()->json(["allowed" => true, "action" => "allow"]);
     }
 
-    // Recebe e regista as atividades do utilizador na máquina (login, idle, etc.)
-    public function getUserInformation(Request $request)
-    {
+    // --- MÉTODOS DE SINCRONIZAÇÃO ---
+
+    public function getApplications(Request $request) {
         $data = $request->json()->all();
-        
         $device = Device::where('hostname', $data['hostname'] ?? '')->first();
-
-        if (!$device) {
-            return response()->json(["error" => "Dispositivo não encontrado."], 404);
+        if ($device && isset($data['applications'])) {
+            $device->applications()->delete();
+            foreach ($data['applications'] as $app) {
+                $device->applications()->create([
+                    'name' => $app['Name'],
+                    'version' => $app['Version'] ?? '1.0'
+                ]);
+            }
         }
+        return response()->json(['message' => 'Apps OK']);
+    }
 
-        if (isset($data['events']) && is_array($data['events'])) {
+    public function getUserInformation(Request $request) {
+        $data = $request->json()->all();
+        $device = Device::where('hostname', $data['hostname'] ?? '')->first();
+        if ($device && isset($data['events'])) {
             foreach ($data['events'] as $event) {
                 UserActivityLog::create([
                     'device_id' => $device->id,
@@ -90,50 +138,6 @@ class AgentController extends Controller
                 ]);
             }
         }
-
-        return response()->json(['message' => 'Logs de atividade registados com sucesso']);
-    }
-
-    // Verifica se o utilizador está dentro do horário de trabalho permitido para o seu grupo de AD
-    public function checkWorkingHours(Request $request)
-    {
-        $data = $request->json()->all();
-        
-        $userGroups = $data['ad_groups'] ?? []; 
-        $currentTime = now()->format('H:i:s');
-        
-        $isAllowed = false;
-
-        // Vai buscar as regras cadastradas no painel
-        $workingHours = WorkingHour::all();
-
-        foreach ($workingHours as $wh) {
-            // O Laravel converte automaticamente o JSON do banco para Array graças ao "casts" no Model
-            $allowedGroups = $wh->ad_groups ?? [];
-
-            // Verifica se há intersecção entre os grupos do utilizador e os permitidos na regra
-            $hasMatchingGroup = count(array_intersect($userGroups, $allowedGroups)) > 0;
-
-            if ($hasMatchingGroup) {
-                if ($currentTime >= $wh->start_time && $currentTime <= $wh->end_time) {
-                    $isAllowed = true;
-                    break;
-                }
-            }
-        }
-
-        if ($isAllowed) {
-            return response()->json([
-                "allowed" => true, 
-                "action" => "allow",
-                "message" => "Dentro do horário de expediente."
-            ]);
-        }
-
-        return response()->json([
-            "allowed" => false, 
-            "action" => "block",
-            "message" => "Fora do horário de trabalho permitido para o seu departamento."
-        ]);
+        return response()->json(['message' => 'Logs OK']);
     }
 }
