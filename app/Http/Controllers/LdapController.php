@@ -22,10 +22,22 @@ class LdapController extends Controller
 
         // Tenta o login via LDAP
         if (Auth::attempt(['samaccountname' => $username, 'password' => $password])) {
-            $request->session()->regenerate();
-            return redirect()->route('home');
+            $user = Auth::user();
+            
+            // Verifica se o utilizador pertence à OU de T.I.
+            if(str_contains($user->getDn(), 'OU=Ti,OU=JDI,OU=FASTEFOOD,DC=fastefood,DC=local')){
+                // Regenera a sessão por segurança e redireciona para a home
+                $request->session()->regenerate();
+                return redirect()->route('home');
+            }
+            
+            // Se a password está correta mas o utilizador NÃO é de T.I., faz logout e recusa o acessoS
+            Auth::logout();
+            return redirect()->route('login')->with('error', 'Acesso restrito: Apenas utilizadores do departamento de T.I.');
+            
         } else {
-            return redirect()->route('login')->with('error', 'Credenciais inválidas ou erro de conexão com AD');
+            // Se as credenciais estiverem erradas ou não houver ligação ao AD
+            return redirect()->route('login')->with('error', 'Credenciais inválidas');
         }
     }
 

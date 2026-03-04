@@ -14,4 +14,15 @@ class User extends Authenticatable implements LdapAuthenticatable
     protected $fillable = [
         'name', 'email', 'password', 'guid', 'domain',
     ];
+
+
+    public static function boot()
+{
+    parent::boot();
+
+    static::addGlobalScope('ou_ti_fastfood', function ($query) {
+        // Ajustado para o domínio fastfood.local
+        $query->in('OU=Ti,OU=JDI,OU=FASTEFOOD,DC=fastefood,DC=local'); 
+    });
+}
 }
