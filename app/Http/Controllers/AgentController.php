@@ -60,6 +60,30 @@ class AgentController extends Controller
         if (!empty($lat) && !empty($lng)) {
             $updateData['latitude']  = $lat;
             $updateData['longitude'] = $lng;
+
+            // --- REVERSE GEOCODING PARA OBTER A CIDADE ---
+            try {
+                $apiKey = env('GOOGLE_MAPS_KEY');
+                $geoResponse = Http::get("https://maps.googleapis.com/maps/api/geocode/json", [
+                    'latlng' => "{$lat},{$lng}",
+                    'key' => $apiKey
+                ]);
+
+                if ($geoResponse->successful()) {
+                    $results = $geoResponse->json()['results'] ?? [];
+                    if (count($results) > 0) {
+                        foreach ($results[0]['address_components'] as $component) {
+                            // "locality" geralmente é a cidade, "administrative_area_level_2" é o município/distrito
+                            if (in_array('locality', $component['types']) || in_array('administrative_area_level_2', $component['types'])) {
+                                $updateData['city'] = $component['long_name'];
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error("Erro Google Maps Reverse Geocoding: " . $e->getMessage());
+            }
         }
 
         // 3. REGISTRO/ATUALIZAÇÃO DO DISPOSITIVO

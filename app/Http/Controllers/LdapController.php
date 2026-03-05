@@ -6,6 +6,9 @@ use App\Imports\UsersImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Ldap\User;
+use App\Models\Device;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 
 class LdapController extends Controller
@@ -31,7 +34,7 @@ class LdapController extends Controller
                 return redirect()->route('home');
             }
             
-            // Se a password está correta mas o utilizador NÃO é de T.I., faz logout e recusa o acessoS
+            // Se a password está correta mas o utilizador NÃO é de T.I., faz logout e recusa o acesso
             Auth::logout();
             return redirect()->route('login')->with('error', 'Acesso restrito: Apenas utilizadores do departamento de T.I.');
             
@@ -44,15 +47,54 @@ class LdapController extends Controller
     public function logout()
     {
         Auth::logout();
-        // Corrigido para a rota 'login' que existe no web.php
         return redirect()->route('login');
     }
 
+    /**
+     * Dashboard Principal (Home) com métricas reais corrigidas
+     */
     public function home()
     {
-        return view('home');
+        // Contagem total de dispositivos
+        $totalDevices = Device::count();
+        
+        // Dispositivos vistos hoje
+        $activeToday = Device::whereDate('last_seen_at', Carbon::today())->count();
+        
+        // Dispositivos bloqueados manualmente
+        $blockedDevices = Device::where('is_blocked', true)->count();
+        
+        // Alertas Críticos: Filtra dispositivos com compliance baixo
+        $criticalDevices = Device::with('applications')->get()->filter(function($device) {
+            return $this->calculateCompliance($device) < 50; 
+        })->count();
+
+        return view('home', compact('totalDevices', 'activeToday', 'blockedDevices', 'criticalDevices'));
+    }
+
+    /**
+     * Cálculo de conformidade necessário para as métricas da Home
+     */
+    private function calculateCompliance($device)
+    {
+        $allowedApps = DB::table('allowed_applications')->pluck('name')->toArray();
+        $totalApps = $device->applications->count();
+        
+        if ($totalApps === 0) return 100;
+
+        $unauthorizedCount = $device->applications->filter(function ($app) use ($allowedApps) {
+            foreach ($allowedApps as $allowed) {
+                if (stripos($app->name, trim($allowed)) !== false) return false;
+            }
+            return true;
+        })->count();
+
+        return round((($totalApps - $unauthorizedCount) / $totalApps) * 100);
     }
     
+    /**
+     * Processamento de pedidos de importação
+     */
     private function proccessRequest($request)
     {
         if ($request->isJson()) {
@@ -79,6 +121,9 @@ class LdapController extends Controller
         }
     }
 
+    /**
+     * Importação de utilizadores via Excel
+     */
     public function createUser(Request $request)
     {
         try {

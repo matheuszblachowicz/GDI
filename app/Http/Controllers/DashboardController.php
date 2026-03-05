@@ -9,10 +9,10 @@ class DashboardController extends Controller
 {
     public function mapa()
     {
-        // Obtém apenas as máquinas que têm geolocalização guardada
+        // Obtém apenas as máquinas que têm geolocalização guardada (agora também trás a cidade)
         $devices = Device::whereNotNull('latitude')
                          ->whereNotNull('longitude')
-                         ->get(['hostname', 'ip_address', 'latitude', 'longitude']);
+                         ->get(['hostname', 'ip_address', 'latitude', 'longitude', 'city']);
                          
         return view('dashboard.mapa', compact('devices'));
     }

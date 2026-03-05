@@ -1,55 +1,51 @@
 @extends('layouts.main')
-@section('title', 'Máquinas')
-@section('header', 'Gestão de Máquinas da Rede')
+
+@section('title', 'Gestão de Dispositivos')
+@section('header', 'Estações de Trabalho Registadas')
 
 @section('content')
-<div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-    <div class="p-6 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-        <h2 class="text-lg font-bold text-slate-800">Parque Informático</h2>
+<div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+    <div class="mb-8 relative">
+        <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+            <svg class="h-6 w-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+        <input type="text" id="deviceSearch" placeholder="Pesquisar por Hostname, IP ou Versão do SO..." 
+               class="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner">
     </div>
+
     <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm text-slate-600">
-            <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-xs border-b border-slate-200">
-                <tr>
-                    <th class="px-6 py-4">Hostname</th>
-                    <th class="px-6 py-4">Endereço IP</th>
-                    <th class="px-6 py-4">Último Utilizador</th>
-                    <th class="px-6 py-4">Estado</th>
-                    <th class="px-6 py-4 text-right">Ação</th>
+        <table class="w-full text-left border-collapse" id="devicesTable">
+            <thead>
+                <tr class="border-b-2 border-slate-100">
+                    <th class="py-5 px-4 text-slate-500 font-extrabold text-sm uppercase tracking-widest">Hostname</th>
+                    <th class="py-5 px-4 text-slate-500 font-extrabold text-sm uppercase tracking-widest">IP Address</th>
+                    <th class="py-5 px-4 text-slate-500 font-extrabold text-sm uppercase tracking-widest">SO Version</th>
+                    <th class="py-5 px-4 text-slate-500 font-extrabold text-sm uppercase tracking-widest">Status</th>
+                    <th class="py-5 px-4 text-slate-500 font-extrabold text-sm uppercase tracking-widest text-right">Ações</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
                 @foreach($devices as $device)
-                <tr class="hover:bg-blue-50/50 transition-colors">
-                    <td class="px-6 py-4 font-bold text-slate-800 flex items-center gap-3">
-                        <div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-500">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                        </div>
-                        {{ $device->hostname }}
+                <tr class="hover:bg-slate-50/80 transition device-row">
+                    <td class="py-5 px-4">
+                        <span class="text-lg font-black text-slate-800">{{ $device->hostname }}</span>
                     </td>
-                    <td class="px-6 py-4 font-mono text-xs">{{ $device->ip_address ?? 'N/A' }}</td>
-                    <td class="px-6 py-4">
-                        <div class="flex items-center gap-2">
-                            <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold uppercase">
-                                {{ substr($device->current_user, 0, 1) }}
-                            </div>
-                            <span class="font-medium text-slate-700">{{ $device->current_user }}</span>
-                        </div>
+                    <td class="py-5 px-4 font-mono text-sm text-slate-500">
+                        {{ $device->ip_address ?? 'N/A' }}
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="py-5 px-4 text-base text-slate-600 font-medium">
+                        {{ $device->os_version }}
+                    </td>
+                    <td class="py-5 px-4">
                         @if($device->is_blocked)
-                            <span class="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
-                                <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Bloqueada
-                            </span>
+                            <span class="px-3 py-1.5 bg-red-100 text-red-700 text-xs font-black rounded-xl uppercase border border-red-200">Bloqueado</span>
                         @else
-                            <span class="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Ativa
-                            </span>
+                            <span class="px-3 py-1.5 bg-emerald-100 text-emerald-700 text-xs font-black rounded-xl uppercase border border-emerald-200">Ativo</span>
                         @endif
                     </td>
-                    <td class="px-6 py-4 text-right">
-                        <a href="{{ route('admin.devices.show', $device->id) }}" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm">
-                            Inspecionar
+                    <td class="py-5 px-4 text-right">
+                        <a href="{{ route('admin.devices.show', $device->id) }}" class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
                         </a>
                     </td>
                 </tr>
@@ -58,4 +54,16 @@
         </table>
     </div>
 </div>
+
+<script>
+    document.getElementById('deviceSearch').addEventListener('keyup', function() {
+        let filter = this.value.toLowerCase();
+        let rows = document.querySelectorAll('.device-row');
+        
+        rows.forEach(row => {
+            let text = row.innerText.toLowerCase();
+            row.style.display = text.includes(filter) ? '' : 'none';
+        });
+    });
+</script>
 @endsection
