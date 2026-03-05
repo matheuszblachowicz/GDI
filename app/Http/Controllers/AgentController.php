@@ -19,10 +19,14 @@ class AgentController extends Controller
     public function verifyMachine(Request $request)
     {
         $data = $request->json()->all();
-        $lat = null; $lng = null;
+        
+        // Pega as coordenadas nativas do Windows (se o PowerShell conseguiu capturar)
+        $lat = $data['latitude'] ?? null; 
+        $lng = $data['longitude'] ?? null;
 
-        // 1. GEOLOCALIZAÇÃO DINÂMICA (Wi-Fi Triangulation)
-        if (!empty($data['wifiAccessPoints'])) {
+        // 1. GEOLOCALIZAÇÃO DINÂMICA (Wi-Fi Triangulation pelo Google)
+        // Só aciona o Google se a máquina enviar 3 ou mais redes (exigência da API)
+        if (!empty($data['wifiAccessPoints']) && count($data['wifiAccessPoints']) >= 3) {
             try {
                 $apiKey = env('GOOGLE_MAPS_KEY'); 
                 $response = Http::post("https://www.googleapis.com/geolocation/v1/geolocate?key={$apiKey}", [
@@ -33,26 +37,38 @@ class AgentController extends Controller
                     $loc = $response->json()['location'];
                     $lat = $loc['lat'];
                     $lng = $loc['lng'];
+                } else {
+                    $status = $response->status();
+                    $erroDoGoogle = json_encode($response->json());
+                    Log::error("O GOOGLE REJEITOU O PEDIDO! Status HTTP: {$status} | Motivo: {$erroDoGoogle}");
                 }
             } catch (\Exception $e) {
                 Log::error("Erro Google Maps API: " . $e->getMessage());
             }
         }
 
-        // 2. REGISTRO/ATUALIZAÇÃO DO DISPOSITIVO
+        // 2. PREPARA OS DADOS PARA O BANCO (Sem as coordenadas ainda)
+        $updateData = [
+            'mac_address'  => $data['mac_address'] ?? '00:00:00:00:00:00',
+            'os_version'   => $data['os_version'] ?? 'Desconhecido',
+            'ip_address'   => $data['ip_address'] ?? "ip não enviado",
+            'last_seen_at' => now(),
+        ];
+
+        // A MÁGICA ACONTECE AQUI: Só atualizamos a posição no banco se tivermos uma posição REAL nova.
+        // Se o Wi-Fi falhou e o Windows falhou, ele mantém a posição que já estava no MariaDB!
+        if (!empty($lat) && !empty($lng)) {
+            $updateData['latitude']  = $lat;
+            $updateData['longitude'] = $lng;
+        }
+
+        // 3. REGISTRO/ATUALIZAÇÃO DO DISPOSITIVO
         $device = Device::updateOrCreate(
             ['hostname' => $data['hostname']],
-            [    
-                'mac_address' => $data['mac_address'] ?? '00:00:00:00:00:00',
-                'os_version'  => $data['os_version'] ?? 'Desconhecido',
-                'latitude'    => $lat,
-                'longitude'   => $lng,
-                'ip_address'  => $data['ip_address'] ?? "ip não enviado",
-                'last_seen_at'=> now(),
-            ]
+            $updateData
         );
 
-        // 3. BLOQUEIO MANUAL (Mensagem que vem da sua View de Device)
+        // 4. BLOQUEIO MANUAL (Mensagem que vem da sua View de Device)
         if ($device->is_blocked) {
             return response()->json([
                 "allowed" => false, 
@@ -61,7 +77,7 @@ class AgentController extends Controller
             ]);
         }
         
-        // 4. BLOQUEIO POR TERMO DE RESPONSABILIDADE
+        // 5. BLOQUEIO POR TERMO DE RESPONSABILIDADE
         $termo = Termo::where('maquina', $data['hostname'])
                       ->where('cpf', $data['cpf'] ?? '')
                       ->first();
