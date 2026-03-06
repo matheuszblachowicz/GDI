@@ -60,5 +60,11 @@ Route::middleware('auth')->group(function () {
         // Mapa Global (Rota: admin.mapa)
         // CORRIGIDO: Nome apenas 'mapa', que com o grupo se torna 'admin.mapa'
         Route::get('/mapa', [AdminController::class, 'mapa'])->name('mapa');
+
+        Route::get('/ldap-logs', [AdminController::class, 'ldapLogs'])->name('ldap_logs.index');
+        Route::post('/ldap-logs/notify', [AdminController::class, 'notifyManagers'])->name('ldap_logs.notify');
+
+
+
     });
 });

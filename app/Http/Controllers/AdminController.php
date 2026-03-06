@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Device;
 use App\Models\WorkingHour;
 use App\Models\UserActivityLog;
+use App\Models\LdapLog; // Adicionado para os logs do LDAP
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-use App\Exports\DevicesExport; // Certifica-te de criar este arquivo conforme orientado anteriormente
+use App\Exports\DevicesExport; 
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Mail; // Adicionado para o envio de e-mails
 
 class AdminController extends Controller
 {
@@ -67,7 +69,7 @@ class AdminController extends Controller
         $complianceLevel = $this->calculateCompliance($device);
 
         $webHistory = UserActivityLog::where('device_id', $id)
-            ->whereIn('process_name', ['chrome.exe', 'msedge.exe', 'firefox.exe', 'brave.exe', 'opera.exe'])
+            ->whereIn('process_name', ['chrome', 'msedge', 'firefox', 'brave', 'opera'])
             ->orderBy('event_at', 'desc')
             ->limit(100)
             ->get();
@@ -192,5 +194,56 @@ class AdminController extends Controller
         $logs = UserActivityLog::orderBy('event_at', 'desc')->paginate(50);
         $devices = Device::pluck('hostname', 'id');
         return view('admin.user_activity.index', compact('logs', 'devices'));
+    }
+
+    // ---------------------------------------------------------------------
+    // AUDITORIA E LOGS LDAP
+    // ---------------------------------------------------------------------
+    
+    /**
+     * Exibe a view de auditoria de logs do LDAP com suporte a pesquisa e filtros
+     */
+    public function ldapLogs(Request $request)
+    {
+        $query = LdapLog::query();
+
+        // Filtro de texto (Nome ou Login)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('usuario_nome', 'like', "%{$search}%")
+                  ->orWhere('samaccountname', 'like', "%{$search}%");
+            });
+        }
+
+        // Filtro por Tipo de Ação
+        if ($request->filled('acao')) {
+            $query->where('acao', $request->acao);
+        }
+
+        // Busca os logs ordenados do mais recente para o mais antigo,
+        // com paginação e mantendo os parâmetros de query (filtros) na URL para a paginação funcionar.
+        $logs = $query->orderBy('created_at', 'desc')->paginate(50)->withQueryString();
+        
+        return view('admin.ldap_logs.index', compact('logs'));
+    }
+
+    /**
+     * Envia o e-mail para os gestores com base nos novos acessos
+     * (Este método pode ser acionado futuramente na nova vista de envio de e-mails)
+     */
+    public function notifyManagers(Request $request)
+    {
+        // Busca os utilizadores criados nas últimas 24 horas
+        $novosUsuarios = LdapLog::where('acao', 'Criado')
+                                ->where('created_at', '>=', now()->subDay())
+                                ->get();
+
+        if ($novosUsuarios->isEmpty()) {
+            return back()->with('info', 'Nenhum novo utilizador para notificar nas últimas 24 horas.');
+        }
+
+
+        return back()->with('success', 'Notificações processadas com sucesso! (Lógica de envio pendente da criação da tabela de Gestores)');
     }
 }

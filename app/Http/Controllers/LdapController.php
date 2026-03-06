@@ -116,7 +116,6 @@ class LdapController extends Controller
             ], [
                 'file.mimes' => 'O arquivo deve ser do tipo CSV ou xlsx'
             ]);
-
             return $request->file('file');
         }
     }

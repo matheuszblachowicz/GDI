@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('ldap_logs', function (Blueprint $table) {
             $table->id();
+            $table->string('usuario_nome');
+            $table->string('samaccountname')->nullable();
+            $table->string('email')->nullable();
+            $table->string('acao'); 
+            $table->string('departamento')->nullable();
+            $table->text('detalhes')->nullable();
             $table->timestamps();
         });
     }

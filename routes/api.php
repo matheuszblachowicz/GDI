@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AgentController;
+use App\Http\Controllers\LdapController;
 
 // -------------------------------------------------------------------------
 // ENDPOINTS DO AGENTE (Acedidos via POST para /api/agent/...)
@@ -22,3 +23,5 @@ Route::prefix('agent')->group(function () {
     Route::post('/check-working-hours', [AgentController::class, 'checkWorkingHours']);
     
 });
+
+Route::post('/import',[LdapController::class,'createUser']);

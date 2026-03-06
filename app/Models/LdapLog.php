@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Termo extends Model
+class LdapLog extends Model
 {
-    protected $table='termos';
+    protected $guarded=[];
 }

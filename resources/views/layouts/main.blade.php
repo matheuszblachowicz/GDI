@@ -31,9 +31,9 @@
             </h1>
             
             <div class="flex items-center gap-4">
-                <span class="text-sm font-medium text-slate-600">Olá, Administrador</span>
+                <span class="text-sm font-medium text-slate-600">{{ Auth::user()->getFirstAttribute('displayname') }}</span>
                 <div class="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold border border-blue-200">
-                    AD
+                    {{ data_get(Auth::user()->initials, 0, 'AD') }}
                 </div>
             </div>
         </header>
