@@ -33,7 +33,7 @@
             <tr>
                 <td class="header-padding" style="background-color: #0f172a; padding: 35px 40px; text-align: center;">
                     <h1 style="color: #ffffff; font-size: 26px; font-weight: 800; font-family: 'Segoe UI', sans-serif; letter-spacing: 1px; margin: 0;">
-                        PLAT<span style="color: #3b82f6;">Trust</span>
+                        Plat<span style="color: #3b82f6;">Trust</span>
                     </h1>
                 </td>
             </tr>
@@ -48,7 +48,7 @@
                     <hr style="border: none; border-top: 1px solid #cbd5e1; margin-top: 40px; margin-bottom: 25px;">
                     
                     <p style="font-size: 14px; color: #64748b; margin: 0; font-weight: 500;">
-                        Caso necessite de suporte com estes acessos, por favor abra um chamado para a equipa de TI.
+                        Caso necessite de suporte com estes acessos, por favor abra um chamado para a equipe  de TI Acesse o portal: <strong>chamadoti.platlog.com.br</strong>.
                     </p>
                 </td>
             </tr>

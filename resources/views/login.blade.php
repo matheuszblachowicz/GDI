@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login - SinaTech AD Platlog</title>
+    <title>Login Platlog</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
@@ -81,7 +81,7 @@
         
         <div class="bg-slate-50 p-5 text-center border-t border-slate-100 flex flex-col gap-1">
             <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Acesso Restrito</span>
-            <span class="text-xs text-slate-500 font-medium">&copy; {{ date('Y') }} SinaTech Factory - Platlog WMS</span>
+            <span class="text-xs text-slate-500 font-medium">&copy; {{ date('Y') }} JDILAB - Platlog GDI</span>
         </div>
     </div>
 

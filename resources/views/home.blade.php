@@ -61,8 +61,8 @@
 
 <div class="bg-indigo-900 rounded-[3rem] p-10 text-white relative overflow-hidden shadow-2xl animate-fade-in-up">
     <div class="relative z-10">
-        <h2 class="text-3xl font-black mb-4 tracking-tight">Sistema GDI Ativo</h2>
-        <p class="text-indigo-200 max-w-xl text-lg font-medium">Monitoramento em tempo real do parque informático da Platlog. Utilize o menu lateral para gerir segurança e inventário.</p>
+        <h2 class="text-3xl font-black mb-4 tracking-tight">Sistema de GDI Ativo</h2>
+        <p class="text-indigo-200 max-w-xl text-lg font-medium">Monitoramento em tempo real do parque Tecnologico da Platlog. Utilize o menu lateral para gerir segurança e inventário.</p>
         <div class="mt-8 flex flex-wrap gap-4">
             <a href="{{ route('admin.devices.index') }}" class="bg-white text-indigo-900 px-8 py-4 rounded-2xl font-black uppercase text-xs shadow-lg hover:bg-indigo-50 transition-all active:scale-95">Gerir Estações</a>
             <a href="{{ route('admin.mapa') }}" class="bg-indigo-700 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs border border-indigo-600 hover:bg-indigo-800 transition-all active:scale-95 text-center">Visualizar Mapa Global</a>

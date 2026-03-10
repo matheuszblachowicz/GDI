@@ -23,16 +23,33 @@ class AdminController extends Controller
         $allowedApps = DB::table('allowed_applications')->pluck('name')->toArray();
         $totalApps = $device->applications->count();
         
-        if ($totalApps === 0) return 100;
+        // CORREÇÃO: Se o dispositivo não reportou nenhuma aplicação, 
+        // a saúde deve ser considerada 0% (ou 1%) para alertar o TI, e não 100%.
+        if ($totalApps === 0) {
+            return 0; 
+        }
+
+        // Se a whitelist estiver vazia, significa que TODAS as aplicações são consideradas não autorizadas
+        if (empty($allowedApps)) {
+            return 0;
+        }
 
         $unauthorizedCount = $device->applications->filter(function ($app) use ($allowedApps) {
             foreach ($allowedApps as $allowed) {
-                if (stripos($app->name, trim($allowed)) !== false) return false;
+                // Se o nome da aplicação instalada contiver o nome da permitida, está OK
+                if (stripos($app->name, trim($allowed)) !== false) {
+                    return false;
+                }
             }
+            // Se passou pelo loop e não encontrou correspondência na whitelist, é não autorizada
             return true;
         })->count();
 
-        return round((($totalApps - $unauthorizedCount) / $totalApps) * 100);
+        // Calcula a percentagem de saúde
+        $compliance = round((($totalApps - $unauthorizedCount) / $totalApps) * 100);
+
+        // Garante que o valor nunca é negativo
+        return max(0, $compliance);
     }
 
     // ---------------------------------------------------------------------
@@ -158,34 +175,93 @@ class AdminController extends Controller
     }
 
     // ---------------------------------------------------------------------
-    // MAPA DE LOCALIDADES
+    // MAPA DE LOCALIDADES (CLUSTERS DINÂMICOS E COMPLIANCE)
     // ---------------------------------------------------------------------
     public function mapa()
     {
-        $devices = Device::whereNotNull('latitude')->whereNotNull('longitude')->get();
+        // Carrega relações 'applications' e 'activityLogs' para evitar N+1 queries na hora de calcular compliance e pegar o user
+        $devices = Device::with(['applications', 'activityLogs'])
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->get();
 
         $groupedDevices = $devices->groupBy(function ($device) {
             return $device->city ?? 'Local Desconhecido';
         });
 
         $locations = [];
+        
         foreach ($groupedDevices as $city => $group) {
             $firstDevice = $group->first();
-            
-            $locations[] = [
-                'city' => $city,
-                'lat' => $firstDevice->latitude,
-                'lng' => $firstDevice->longitude,
-                'total' => $group->count(),
-                'machines' => $group->map(function($d) {
+            $baseLat = (float) $firstDevice->latitude;
+            $baseLng = (float) $firstDevice->longitude;
+
+            $normal = collect();
+            $blocked = collect();
+            $lowCompliance = collect();
+
+            // Separa os dispositivos nos 3 clusters dinâmicos
+            foreach ($group as $d) {
+                $compliance = $this->calculateCompliance($d);
+                $d->dynamic_compliance = $compliance; // Guarda no objeto temporariamente para uso abaixo
+
+                if ($d->is_blocked) {
+                    $blocked->push($d);
+                } elseif ($compliance < 80) { // Limite estipulado para Compliance Baixo (pode alterar conforme a necessidade)
+                    $lowCompliance->push($d);
+                } else {
+                    $normal->push($d);
+                }
+            }
+
+            // Função anônima para mapear os dados da máquina que vão para o frontend
+            $mapMachines = function($machines) {
+                return $machines->map(function($d) {
                     return [
                         'hostname' => $d->hostname,
                         'ip' => $d->ip_address,
                         'user' => $d->current_user ?? 'Sem registo',
-                        'blocked' => $d->is_blocked
+                        'blocked' => $d->is_blocked,
+                        'compliance' => $d->dynamic_compliance
                     ];
-                })->toArray()
-            ];
+                })->toArray();
+            };
+
+            // Adiciona cluster Normal
+            if ($normal->count() > 0) {
+                $locations[] = [
+                    'city' => $city,
+                    'type' => 'normal',
+                    'lat' => $baseLat,
+                    'lng' => $baseLng,
+                    'total' => $normal->count(),
+                    'machines' => $mapMachines($normal)
+                ];
+            }
+
+            // Adiciona cluster de Bloqueados (Adicionamos um offset geográfico bem pequeno)
+            if ($blocked->count() > 0) {
+                $locations[] = [
+                    'city' => $city . ' (Bloqueadas)',
+                    'type' => 'blocked',
+                    'lat' => $baseLat + 0.0015, 
+                    'lng' => $baseLng + 0.0015,
+                    'total' => $blocked->count(),
+                    'machines' => $mapMachines($blocked)
+                ];
+            }
+
+            // Adiciona cluster de Compliance Baixo (Offset pro lado oposto)
+            if ($lowCompliance->count() > 0) {
+                $locations[] = [
+                    'city' => $city . ' (Compliance Baixo)',
+                    'type' => 'low_compliance',
+                    'lat' => $baseLat - 0.0015, 
+                    'lng' => $baseLng - 0.0015,
+                    'total' => $lowCompliance->count(),
+                    'machines' => $mapMachines($lowCompliance)
+                ];
+            }
         }
 
         return view('admin.mapa', compact('locations'));
@@ -229,7 +305,6 @@ class AdminController extends Controller
      */
     public function notifyManagers(Request $request)
     {
-        // 1. Busca os utilizadores criados HOJE a partir do log
         $novosUsuarios = LdapLog::where('acao', 'CRIADO')
                                 ->whereDate('created_at', now()->toDateString())
                                 ->get();
@@ -238,7 +313,6 @@ class AdminController extends Controller
             return back()->with('info', 'Nenhum novo utilizador importado no dia de hoje.');
         }
 
-        // 2. Puxa o template do banco
         $template = EmailTemplate::where('name', 'notificacao_gestor')->first();
 
         if (!$template) {
@@ -247,36 +321,24 @@ class AdminController extends Controller
 
         $emailsEnviados = 0;
 
-        // 3. Itera sobre CADA utilizador novo individualmente
         foreach ($novosUsuarios as $user) {
-            
-            // Busca os gestores do departamento DESTE utilizador específico
             $gestores = Manager::where('department', $user->departamento)->get();
 
-            // Se não houver gestor cadastrado para este departamento, pula para o próximo funcionário
             if ($gestores->isEmpty()) {
                 continue; 
             }
 
-            // Tratamento caso o e-mail não tenha sido gerado
             $emailExibicao = $user->email ? $user->email : 'Sem e-mail cadastrado';
 
-            // 4. Dispara UM e-mail para cada gestor notificando sobre ESTE utilizador
             foreach ($gestores as $gestor) {
-                
-                // Copia o layout base para substituir as variáveis
                 $corpoPersonalizado = $template->body;
                 
-                // --- SUBSTITUIÇÕES EXCLUSIVAS DESTE COLABORADOR ---
                 $corpoPersonalizado = str_replace('[NOME_COLABORADOR]', $user->usuario_nome, $corpoPersonalizado);
                 $corpoPersonalizado = str_replace('[LOGIN]', $user->samaccountname, $corpoPersonalizado);
                 $corpoPersonalizado = str_replace('[EMAIL_COLABORADOR]', $emailExibicao, $corpoPersonalizado);
-
-                // --- SUBSTITUIÇÕES DO GESTOR E DATA ---
                 $corpoPersonalizado = str_replace('[NOME_GESTOR]', $gestor->name, $corpoPersonalizado);
                 $corpoPersonalizado = str_replace('[DATA]', now()->format('d/m/Y'), $corpoPersonalizado);
 
-                // Envia o e-mail
                 Mail::to($gestor->email)->send(new ManagerNotificationMail($template->subject, $corpoPersonalizado));
                 
                 $emailsEnviados++;
@@ -318,11 +380,8 @@ class AdminController extends Controller
         return redirect()->route('admin.managers.index')->with('success', 'Gestor removido com sucesso!');
     }
 
-    // --- MÉTODOS PARA O TEMPLATE DE E-MAIL ---
     public function editEmailTemplate()
     {
-        // Busca o template padrão ou cria um vazio se não existir.
-        // Já inclui as novas variáveis individuais como exemplo.
         $template = EmailTemplate::firstOrCreate(
             ['name' => 'notificacao_gestor'],
             [
