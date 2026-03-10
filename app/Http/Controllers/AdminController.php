@@ -5,17 +5,19 @@ namespace App\Http\Controllers;
 use App\Models\Device;
 use App\Models\WorkingHour;
 use App\Models\UserActivityLog;
-use App\Models\LdapLog; // Adicionado para os logs do LDAP
+use App\Models\LdapLog;
+use App\Models\Manager;
+use App\Models\EmailTemplate;
+use App\Mail\ManagerNotificationMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Exports\DevicesExport; 
 use Maatwebsite\Excel\Facades\Excel;
-use Illuminate\Support\Facades\Mail; // Adicionado para o envio de e-mails
+use Illuminate\Support\Facades\Mail;
 
 class AdminController extends Controller
 {
-   
     private function calculateCompliance($device)
     {
         $allowedApps = DB::table('allowed_applications')->pluck('name')->toArray();
@@ -199,10 +201,6 @@ class AdminController extends Controller
     // ---------------------------------------------------------------------
     // AUDITORIA E LOGS LDAP
     // ---------------------------------------------------------------------
-    
-    /**
-     * Exibe a view de auditoria de logs do LDAP com suporte a pesquisa e filtros
-     */
     public function ldapLogs(Request $request)
     {
         $query = LdapLog::query();
@@ -221,29 +219,134 @@ class AdminController extends Controller
             $query->where('acao', $request->acao);
         }
 
-        // Busca os logs ordenados do mais recente para o mais antigo,
-        // com paginação e mantendo os parâmetros de query (filtros) na URL para a paginação funcionar.
         $logs = $query->orderBy('created_at', 'desc')->paginate(50)->withQueryString();
         
         return view('admin.ldap_logs.index', compact('logs'));
     }
 
     /**
-     * Envia o e-mail para os gestores com base nos novos acessos
-     * (Este método pode ser acionado futuramente na nova vista de envio de e-mails)
+     * Envia um e-mail INDIVIDUAL aos gestores para cada novo colaborador importado no dia.
      */
     public function notifyManagers(Request $request)
     {
-        // Busca os utilizadores criados nas últimas 24 horas
-        $novosUsuarios = LdapLog::where('acao', 'Criado')
-                                ->where('created_at', '>=', now()->subDay())
+        // 1. Busca os utilizadores criados HOJE a partir do log
+        $novosUsuarios = LdapLog::where('acao', 'CRIADO')
+                                ->whereDate('created_at', now()->toDateString())
                                 ->get();
 
         if ($novosUsuarios->isEmpty()) {
-            return back()->with('info', 'Nenhum novo utilizador para notificar nas últimas 24 horas.');
+            return back()->with('info', 'Nenhum novo utilizador importado no dia de hoje.');
         }
 
+        // 2. Puxa o template do banco
+        $template = EmailTemplate::where('name', 'notificacao_gestor')->first();
 
-        return back()->with('success', 'Notificações processadas com sucesso! (Lógica de envio pendente da criação da tabela de Gestores)');
+        if (!$template) {
+            return back()->with('error', 'Não foi possível notificar: Template de e-mail não cadastrado.');
+        }
+
+        $emailsEnviados = 0;
+
+        // 3. Itera sobre CADA utilizador novo individualmente
+        foreach ($novosUsuarios as $user) {
+            
+            // Busca os gestores do departamento DESTE utilizador específico
+            $gestores = Manager::where('department', $user->departamento)->get();
+
+            // Se não houver gestor cadastrado para este departamento, pula para o próximo funcionário
+            if ($gestores->isEmpty()) {
+                continue; 
+            }
+
+            // Tratamento caso o e-mail não tenha sido gerado
+            $emailExibicao = $user->email ? $user->email : 'Sem e-mail cadastrado';
+
+            // 4. Dispara UM e-mail para cada gestor notificando sobre ESTE utilizador
+            foreach ($gestores as $gestor) {
+                
+                // Copia o layout base para substituir as variáveis
+                $corpoPersonalizado = $template->body;
+                
+                // --- SUBSTITUIÇÕES EXCLUSIVAS DESTE COLABORADOR ---
+                $corpoPersonalizado = str_replace('[NOME_COLABORADOR]', $user->usuario_nome, $corpoPersonalizado);
+                $corpoPersonalizado = str_replace('[LOGIN]', $user->samaccountname, $corpoPersonalizado);
+                $corpoPersonalizado = str_replace('[EMAIL_COLABORADOR]', $emailExibicao, $corpoPersonalizado);
+
+                // --- SUBSTITUIÇÕES DO GESTOR E DATA ---
+                $corpoPersonalizado = str_replace('[NOME_GESTOR]', $gestor->name, $corpoPersonalizado);
+                $corpoPersonalizado = str_replace('[DATA]', now()->format('d/m/Y'), $corpoPersonalizado);
+
+                // Envia o e-mail
+                Mail::to($gestor->email)->send(new ManagerNotificationMail($template->subject, $corpoPersonalizado));
+                
+                $emailsEnviados++;
+            }
+        }
+
+        if ($emailsEnviados === 0) {
+            return back()->with('warning', 'Foram encontrados novos utilizadores, mas nenhum gestor correspondente aos departamentos deles está cadastrado.');
+        }
+
+        return back()->with('success', "Notificações individuais enviadas com sucesso! ($emailsEnviados e-mails disparados).");
+    }
+
+    // ---------------------------------------------------------------------
+    // GESTÃO DE GESTORES E EMAILS
+    // ---------------------------------------------------------------------
+    public function managers()
+    {
+        $managers = Manager::all();
+        return view('admin.managers.index', compact('managers'));
+    }
+
+    public function storeManager(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'department' => 'required|string|max:255',
+        ]);
+
+        Manager::create($request->all());
+
+        return redirect()->route('admin.managers.index')->with('success', 'Gestor cadastrado com sucesso!');
+    }
+
+    public function destroyManager($id)
+    {
+        Manager::findOrFail($id)->delete();
+        return redirect()->route('admin.managers.index')->with('success', 'Gestor removido com sucesso!');
+    }
+
+    // --- MÉTODOS PARA O TEMPLATE DE E-MAIL ---
+    public function editEmailTemplate()
+    {
+        // Busca o template padrão ou cria um vazio se não existir.
+        // Já inclui as novas variáveis individuais como exemplo.
+        $template = EmailTemplate::firstOrCreate(
+            ['name' => 'notificacao_gestor'],
+            [
+                'subject' => 'Novo Colaborador Adicionado ao Departamento',
+                'body' => "Olá [NOME_GESTOR],\n\nInformamos que no dia [DATA], um novo colaborador foi importado para o seu departamento.\n\nDetalhes do Acesso:\n- Nome: [NOME_COLABORADOR]\n- Login: [LOGIN]\n- E-mail: [EMAIL_COLABORADOR]\n\nAtenciosamente,\nEquipa de TI"
+            ]
+        );
+
+        return view('admin.email_templates.edit', compact('template'));
+    }
+
+    public function updateEmailTemplate(Request $request)
+    {
+        $request->validate([
+            'subject' => 'required|string|max:255',
+            'body' => 'required|string',
+        ]);
+
+        $template = EmailTemplate::where('name', 'notificacao_gestor')->firstOrFail();
+        $template->update([
+            'subject' => $request->subject,
+            'body' => $request->body,
+        ]);
+
+        return redirect()->route('admin.email_template.edit')->with('success', 'Layout do e-mail atualizado com sucesso!');
     }
 }

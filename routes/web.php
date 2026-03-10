@@ -65,6 +65,15 @@ Route::middleware('auth')->group(function () {
         Route::post('/ldap-logs/notify', [AdminController::class, 'notifyManagers'])->name('ldap_logs.notify');
 
 
+        Route::get('/managers', [AdminController::class, 'managers'])->name('managers.index');
+        Route::post('/managers', [AdminController::class, 'storeManager'])->name('managers.store');
+        Route::delete('/managers/{id}', [AdminController::class, 'destroyManager'])->name('managers.destroy');
+
+        // Layout de E-mail
+        Route::get('/email-template', [AdminController::class, 'editEmailTemplate'])->name('email_template.edit');
+        Route::post('/email-template', [AdminController::class, 'updateEmailTemplate'])->name('email_template.update');
+
+
 
     });
 });
