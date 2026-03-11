@@ -23,46 +23,33 @@ class AdminController extends Controller
         $allowedApps = DB::table('allowed_applications')->pluck('name')->toArray();
         $totalApps = $device->applications->count();
         
-        // CORREÇÃO: Se o dispositivo não reportou nenhuma aplicação, 
-        // a saúde deve ser considerada 0% (ou 1%) para alertar o TI, e não 100%.
         if ($totalApps === 0) {
             return 0; 
         }
 
-        // Se a whitelist estiver vazia, significa que TODAS as aplicações são consideradas não autorizadas
         if (empty($allowedApps)) {
             return 0;
         }
 
         $unauthorizedCount = $device->applications->filter(function ($app) use ($allowedApps) {
             foreach ($allowedApps as $allowed) {
-                // Se o nome da aplicação instalada contiver o nome da permitida, está OK
                 if (stripos($app->name, trim($allowed)) !== false) {
                     return false;
                 }
             }
-            // Se passou pelo loop e não encontrou correspondência na whitelist, é não autorizada
             return true;
         })->count();
 
-        // Calcula a percentagem de saúde
         $compliance = round((($totalApps - $unauthorizedCount) / $totalApps) * 100);
 
-        // Garante que o valor nunca é negativo
         return max(0, $compliance);
     }
 
-    // ---------------------------------------------------------------------
-    // EXPORTAÇÃO
-    // ---------------------------------------------------------------------
     public function exportDevices() 
     {
         return Excel::download(new DevicesExport, 'dispositivos_platlog.xlsx');
     }
 
-    // ---------------------------------------------------------------------
-    // GESTÃO DE DISPOSITIVOS E INSPEÇÃO
-    // ---------------------------------------------------------------------
     public function devices()
     {
         $devices = Device::with(['activityLogs' => function($query) {
@@ -113,9 +100,17 @@ class AdminController extends Controller
         return back()->with('success', 'Ordem de bloqueio registada com sucesso.');
     }
 
-    // ---------------------------------------------------------------------
-    // GESTÃO DE HORÁRIOS (WORKING HOURS)
-    // ---------------------------------------------------------------------
+    // NOVO: Método para desbloquear a estação
+    public function unblockDevice($id)
+    {
+        $device = Device::findOrFail($id);
+        $device->is_blocked = false;
+        $device->block_message = null; // Limpa a mensagem de bloqueio
+        $device->save();
+
+        return back()->with('success', 'A estação foi desbloqueada com sucesso.');
+    }
+
     public function workingHours()
     {
         $workingHours = WorkingHour::all();
@@ -143,9 +138,6 @@ class AdminController extends Controller
         return back()->with('success', 'Regra de horário salva com sucesso!');
     }
 
-    // ---------------------------------------------------------------------
-    // WHITELIST DE APLICAÇÕES
-    // ---------------------------------------------------------------------
     public function allowedApps()
     {
         $apps = DB::table('allowed_applications')->get();
@@ -174,12 +166,8 @@ class AdminController extends Controller
         return back()->with('success', 'Aplicação removida da lista.');
     }
 
-    // ---------------------------------------------------------------------
-    // MAPA DE LOCALIDADES (CLUSTERS DINÂMICOS E COMPLIANCE)
-    // ---------------------------------------------------------------------
     public function mapa()
     {
-        // Carrega relações 'applications' e 'activityLogs' para evitar N+1 queries na hora de calcular compliance e pegar o user
         $devices = Device::with(['applications', 'activityLogs'])
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
@@ -200,21 +188,19 @@ class AdminController extends Controller
             $blocked = collect();
             $lowCompliance = collect();
 
-            // Separa os dispositivos nos 3 clusters dinâmicos
             foreach ($group as $d) {
                 $compliance = $this->calculateCompliance($d);
-                $d->dynamic_compliance = $compliance; // Guarda no objeto temporariamente para uso abaixo
+                $d->dynamic_compliance = $compliance; 
 
                 if ($d->is_blocked) {
                     $blocked->push($d);
-                } elseif ($compliance < 80) { // Limite estipulado para Compliance Baixo (pode alterar conforme a necessidade)
+                } elseif ($compliance < 80) { 
                     $lowCompliance->push($d);
                 } else {
                     $normal->push($d);
                 }
             }
 
-            // Função anônima para mapear os dados da máquina que vão para o frontend
             $mapMachines = function($machines) {
                 return $machines->map(function($d) {
                     return [
@@ -227,7 +213,6 @@ class AdminController extends Controller
                 })->toArray();
             };
 
-            // Adiciona cluster Normal
             if ($normal->count() > 0) {
                 $locations[] = [
                     'city' => $city,
@@ -239,7 +224,6 @@ class AdminController extends Controller
                 ];
             }
 
-            // Adiciona cluster de Bloqueados (Adicionamos um offset geográfico bem pequeno)
             if ($blocked->count() > 0) {
                 $locations[] = [
                     'city' => $city . ' (Bloqueadas)',
@@ -251,7 +235,6 @@ class AdminController extends Controller
                 ];
             }
 
-            // Adiciona cluster de Compliance Baixo (Offset pro lado oposto)
             if ($lowCompliance->count() > 0) {
                 $locations[] = [
                     'city' => $city . ' (Compliance Baixo)',
@@ -274,14 +257,10 @@ class AdminController extends Controller
         return view('admin.user_activity.index', compact('logs', 'devices'));
     }
 
-    // ---------------------------------------------------------------------
-    // AUDITORIA E LOGS LDAP
-    // ---------------------------------------------------------------------
     public function ldapLogs(Request $request)
     {
         $query = LdapLog::query();
 
-        // Filtro de texto (Nome ou Login)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -290,7 +269,6 @@ class AdminController extends Controller
             });
         }
 
-        // Filtro por Tipo de Ação
         if ($request->filled('acao')) {
             $query->where('acao', $request->acao);
         }
@@ -300,9 +278,6 @@ class AdminController extends Controller
         return view('admin.ldap_logs.index', compact('logs'));
     }
 
-    /**
-     * Envia um e-mail INDIVIDUAL aos gestores para cada novo colaborador importado no dia.
-     */
     public function notifyManagers(Request $request)
     {
         $novosUsuarios = LdapLog::where('acao', 'CRIADO')
@@ -352,9 +327,6 @@ class AdminController extends Controller
         return back()->with('success', "Notificações individuais enviadas com sucesso! ($emailsEnviados e-mails disparados).");
     }
 
-    // ---------------------------------------------------------------------
-    // GESTÃO DE GESTORES E EMAILS
-    // ---------------------------------------------------------------------
     public function managers()
     {
         $managers = Manager::all();

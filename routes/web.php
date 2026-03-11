@@ -43,6 +43,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/devices', [AdminController::class, 'devices'])->name('devices.index');
         Route::get('/devices/{id}', [AdminController::class, 'showDevice'])->name('devices.show');
         Route::post('/devices/{id}/block', [AdminController::class, 'blockDevice'])->name('devices.block');
+        Route::post('/admin/devices/{device}/unblock', [AdminController::class, 'unblockDevice'])->name('devices.unblock');
         
         // Regras de Horário (Rotas: admin.working_hours.index, admin.working_hours.store)
         Route::get('/working-hours', [AdminController::class, 'workingHours'])->name('working_hours.index');

@@ -56,7 +56,6 @@ class AgentController extends Controller
         ];
 
         // A MÁGICA ACONTECE AQUI: Só atualizamos a posição no banco se tivermos uma posição REAL nova.
-        // Se o Wi-Fi falhou e o Windows falhou, ele mantém a posição que já estava no MariaDB!
         if (!empty($lat) && !empty($lng)) {
             $updateData['latitude']  = $lat;
             $updateData['longitude'] = $lng;
@@ -73,7 +72,6 @@ class AgentController extends Controller
                     $results = $geoResponse->json()['results'] ?? [];
                     if (count($results) > 0) {
                         foreach ($results[0]['address_components'] as $component) {
-                            // "locality" geralmente é a cidade, "administrative_area_level_2" é o município/distrito
                             if (in_array('locality', $component['types']) || in_array('administrative_area_level_2', $component['types'])) {
                                 $updateData['city'] = $component['long_name'];
                                 break;
@@ -96,7 +94,7 @@ class AgentController extends Controller
         if ($device->is_blocked) {
             return response()->json([
                 "allowed" => false, 
-                "action"  => "block", 
+                "action"  => "block_manual", 
                 "message" => $device->block_message ?? "Acesso suspenso pelo administrador."
             ]);
         }
@@ -109,7 +107,7 @@ class AgentController extends Controller
         if (!$termo) {
             return response()->json([
                 "allowed" => false, 
-                "action"  => "block", 
+                "action"  => "block_termo", 
                 "message" => "O termo de responsabilidade não foi assinado para este CPF."
             ]);
         }
@@ -150,34 +148,86 @@ class AgentController extends Controller
 
     public function getApplications(Request $request) {
         $data = $request->json()->all();
-        $device = Device::where('hostname', $data['hostname'] ?? '')->first();
-        if ($device && isset($data['applications'])) {
-            $device->applications()->delete();
-            foreach ($data['applications'] as $app) {
-                $device->applications()->create([
-                    'name' => $app['Name'],
-                    'version' => $app['Version'] ?? '1.0'
-                ]);
+        $hostname = $data['hostname'] ?? null;
+
+        Log::info("Recebendo lista de apps da máquina: {$hostname}");
+
+        if (!$hostname) {
+            return response()->json(['error' => 'Hostname não informado'], 400);
+        }
+
+        // Garante que o Device existe no banco, evitando o erro de foreign key ou null pointer
+        $device = Device::firstOrCreate(
+            ['hostname' => $hostname],
+            ['mac_address' => '00:00:00:00:00:00', 'os_version' => 'Aguardando Sincronização']
+        );
+
+        if (isset($data['applications']) && is_array($data['applications'])) {
+            try {
+                // Limpa os aplicativos antigos para refletir desinstalações
+                $device->applications()->delete();
+                
+                $contador = 0;
+                foreach ($data['applications'] as $app) {
+                    // Trata chaves em maiúsculo ou minúsculo de forma segura
+                    $appName = $app['name'] ?? $app['Name'] ?? null;
+                    $appVersion = $app['version'] ?? $app['Version'] ?? '1.0';
+
+                    if (!empty($appName)) {
+                        $device->applications()->create([
+                            'name' => $appName,
+                            'version' => $appVersion
+                        ]);
+                        $contador++;
+                    }
+                }
+                
+                Log::info("Foram salvos {$contador} aplicativos para a máquina {$hostname}.");
+                return response()->json(['message' => "{$contador} Apps salvos no banco com sucesso!"]);
+                
+            } catch (\Exception $e) {
+                Log::error("Erro no foreach de apps do device {$hostname}: " . $e->getMessage());
+                return response()->json(['error' => 'Falha interna ao salvar apps'], 500);
             }
         }
-        return response()->json(['message' => 'Apps OK']);
+
+        Log::warning("A máquina {$hostname} enviou o payload sem o array de applications.");
+        return response()->json(['message' => 'Nenhum app recebido']);
     }
 
     public function getUserInformation(Request $request) {
         $data = $request->json()->all();
-        $device = Device::where('hostname', $data['hostname'] ?? '')->first();
-        if ($device && isset($data['events'])) {
-            foreach ($data['events'] as $event) {
-                UserActivityLog::create([
-                    'device_id' => $device->id,
-                    'username' => $event['username'] ?? 'Desconhecido',
-                    'event_type' => $event['event_type'], 
-                    'active_window_title' => $event['active_window_title'] ?? null,
-                    'process_name' => $event['process_name'] ?? null,
-                    'event_at' => $event['event_at'] ?? now(),
-                ]);
+        $hostname = $data['hostname'] ?? null;
+
+        if (!$hostname) {
+            return response()->json(['error' => 'Hostname não informado'], 400);
+        }
+
+        // Proteção adicionada aqui também para não perder logs de janelas ativas
+        $device = Device::firstOrCreate(
+            ['hostname' => $hostname],
+            ['mac_address' => '00:00:00:00:00:00', 'os_version' => 'Aguardando Sincronização']
+        );
+
+        if (isset($data['events']) && is_array($data['events'])) {
+            try {
+                foreach ($data['events'] as $event) {
+                    UserActivityLog::create([
+                        'device_id' => $device->id,
+                        'username' => $event['username'] ?? 'Desconhecido',
+                        'event_type' => $event['event_type'], 
+                        'active_window_title' => $event['active_window_title'] ?? null,
+                        'process_name' => $event['process_name'] ?? null,
+                        'event_at' => $event['event_at'] ?? now(),
+                    ]);
+                }
+                return response()->json(['message' => 'Logs OK']);
+            } catch (\Exception $e) {
+                Log::error("Erro ao salvar log de atividade do device {$hostname}: " . $e->getMessage());
+                return response()->json(['error' => 'Falha interna ao salvar logs'], 500);
             }
         }
-        return response()->json(['message' => 'Logs OK']);
+        
+        return response()->json(['message' => 'Nenhum evento recebido']);
     }
 }

@@ -23,6 +23,12 @@
                         <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
                         {{ $device->city ?? 'Localidade Desconhecida' }}
                     </span>
+                    
+                    @if($device->is_blocked)
+                    <span class="px-4 py-2 bg-red-100 text-red-700 rounded-xl text-sm font-black border border-red-200 shadow-sm animate-pulse">
+                        ⚠️ ESTAÇÃO BLOQUEADA
+                    </span>
+                    @endif
                 </div>
             </div>
         </div>
@@ -58,7 +64,9 @@
         <button onclick="switchTab('apps')" id="tab-btn-apps" class="flex-1 py-6 text-center text-base font-black text-indigo-600 border-b-4 border-indigo-600 bg-white transition-all">Aplicações</button>
         <button onclick="switchTab('web')" id="tab-btn-web" class="flex-1 py-6 text-center text-base font-bold text-slate-500 hover:text-indigo-600 transition-all border-b-4 border-transparent">Histórico Web</button>
         <button onclick="switchTab('activity')" id="tab-btn-activity" class="flex-1 py-6 text-center text-base font-bold text-slate-500 hover:text-indigo-600 transition-all border-b-4 border-transparent">Atividade Geral</button>
-        <button onclick="switchTab('actions')" id="tab-btn-actions" class="flex-1 py-6 text-center text-xs font-black text-red-500 hover:bg-red-50 border-l border-slate-200 transition-all uppercase tracking-widest">Ações Críticas</button>
+        <button onclick="switchTab('actions')" id="tab-btn-actions" class="flex-1 py-6 text-center text-xs font-black {{ $device->is_blocked ? 'text-emerald-600 hover:bg-emerald-50' : 'text-red-500 hover:bg-red-50' }} border-l border-slate-200 transition-all uppercase tracking-widest">
+            Ações da Estação
+        </button>
     </div>
 
     <div class="p-10">
@@ -142,17 +150,34 @@
 
         <div id="tab-actions" class="hidden animate-fade-in">
             <div class="max-w-3xl mx-auto py-6 text-center">
-                <h3 class="text-3xl font-black text-red-600 mb-6 uppercase tracking-tight">Bloqueio Crítico</h3>
-                <form action="{{ route('admin.devices.block', $device->id) }}" method="POST" class="bg-red-50 p-10 rounded-[3rem] border-2 border-red-100 shadow-xl">
-                    @csrf
-                    <div class="mb-8">
-                        <label class="block text-sm font-black text-red-900 mb-4 uppercase tracking-widest">Mensagem de Bloqueio:</label>
-                        <textarea name="block_message" rows="4" class="w-full border-red-200 p-6 rounded-[2rem] text-lg font-medium focus:ring-red-500 shadow-inner" placeholder="Ex: Violação de Segurança Identificada.">{{ $device->block_message ?? 'Acesso suspenso pela Administração de TI.' }}</textarea>
+                
+                @if($device->is_blocked)
+                    <h3 class="text-3xl font-black text-emerald-600 mb-6 uppercase tracking-tight">Desbloquear Estação</h3>
+                    <div class="bg-red-50 p-6 rounded-3xl mb-6 border-2 border-red-100 text-left">
+                        <p class="text-red-800 font-bold uppercase tracking-wider text-sm mb-2">Motivo do Bloqueio Atual:</p>
+                        <p class="text-red-600 text-lg">{{ $device->block_message }}</p>
                     </div>
-                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-10 py-5 rounded-[2rem] font-black w-full shadow-2xl shadow-red-200 transition-all active:scale-95 uppercase tracking-widest text-lg">
-                        Confirmar Bloqueio da Estação
-                    </button>
-                </form>
+                    
+                    <form action="{{ route('admin.devices.unblock', $device->id) }}" method="POST" class="bg-emerald-50 p-10 rounded-[3rem] border-2 border-emerald-100 shadow-xl">
+                        @csrf
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-5 rounded-[2rem] font-black w-full shadow-2xl shadow-emerald-200 transition-all active:scale-95 uppercase tracking-widest text-lg">
+                            Desbloquear Estação e Liberar Acesso
+                        </button>
+                    </form>
+                @else
+                    <h3 class="text-3xl font-black text-red-600 mb-6 uppercase tracking-tight">Bloqueio Crítico</h3>
+                    <form action="{{ route('admin.devices.block', $device->id) }}" method="POST" class="bg-red-50 p-10 rounded-[3rem] border-2 border-red-100 shadow-xl">
+                        @csrf
+                        <div class="mb-8">
+                            <label class="block text-sm font-black text-red-900 mb-4 uppercase tracking-widest text-left">Mensagem de Bloqueio (visível para o utilizador):</label>
+                            <textarea name="block_message" rows="4" class="w-full border-red-200 p-6 rounded-[2rem] text-lg font-medium focus:ring-red-500 shadow-inner" placeholder="Ex: Violação de Segurança Identificada.">{{ $device->block_message ?? 'Acesso suspenso pela Administração de TI.' }}</textarea>
+                        </div>
+                        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-10 py-5 rounded-[2rem] font-black w-full shadow-2xl shadow-red-200 transition-all active:scale-95 uppercase tracking-widest text-lg">
+                            Confirmar Bloqueio da Estação
+                        </button>
+                    </form>
+                @endif
+                
             </div>
         </div>
     </div>
@@ -169,17 +194,26 @@
 @push('scripts')
 <script>
     function switchTab(tabName) {
+        let isBlocked = {{ $device->is_blocked ? 'true' : 'false' }};
+        
         ['apps', 'web', 'activity', 'actions'].forEach(tab => {
             document.getElementById('tab-' + tab).classList.add('hidden');
             let btn = document.getElementById('tab-btn-' + tab);
-            btn.className = "flex-1 py-6 text-center text-base font-bold transition-all text-slate-500 hover:text-indigo-600 border-b-4 border-transparent " + (tab==='actions' ? 'border-l border-slate-200 text-xs font-black' : '');
+            
+            // Estilo padrão inativo
+            btn.className = "flex-1 py-6 text-center text-base font-bold transition-all text-slate-500 hover:text-indigo-600 border-b-4 border-transparent " + 
+                            (tab==='actions' ? 'border-l border-slate-200 text-xs font-black' : '');
         });
         
         document.getElementById('tab-' + tabName).classList.remove('hidden');
         let activeBtn = document.getElementById('tab-btn-' + tabName);
         
         if(tabName === 'actions') {
-            activeBtn.className = "flex-1 py-6 text-center text-xs font-black transition-all text-red-700 bg-red-50 border-b-4 border-red-600 border-l border-slate-200";
+            if(isBlocked) {
+                activeBtn.className = "flex-1 py-6 text-center text-xs font-black transition-all text-emerald-700 bg-emerald-50 border-b-4 border-emerald-600 border-l border-slate-200";
+            } else {
+                activeBtn.className = "flex-1 py-6 text-center text-xs font-black transition-all text-red-700 bg-red-50 border-b-4 border-red-600 border-l border-slate-200";
+            }
         } else {
             activeBtn.className = "flex-1 py-6 text-center text-base font-black transition-all text-indigo-600 border-b-4 border-indigo-600 bg-white";
         }

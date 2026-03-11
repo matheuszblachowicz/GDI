@@ -4,13 +4,10 @@ namespace App\Imports;
 
 use App\Ldap\User;
 use App\Models\LdapLog;
-
 use LdapRecord\Models\ActiveDirectory\Group;
-
 use Maatwebsite\Excel\Row;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
-
 use Maatwebsite\Excel\Concerns\OnEachRow;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
@@ -29,25 +26,16 @@ class UsersImport implements
 {
     use SkipsErrors;
 
-    /**
-     * TAMANHO DOS BLOCOS
-     */
     public function chunkSize(): int
     {
         return 200;
     }
 
-    /**
-     * LINHA DO CABEÇALHO
-     */
     public function headingRow(): int
     {
         return 1;
     }
 
-    /**
-     * VALIDAÇÃO DAS COLUNAS
-     */
     public function rules(): array
     {
         return [
@@ -58,82 +46,54 @@ class UsersImport implements
         ];
     }
 
-    /**
-     * PROCESSAMENTO DA LINHA
-     */
     public function onRow(Row $row)
     {
         try {
-
             $data = collect($row->toArray())
                 ->mapWithKeys(fn ($v, $k) => [trim(strtolower($k)) => $v])
                 ->toArray();
 
-            if (!$data) {
-                return;
-            }
+            if (!$data) return;
 
             $nome = $data['nomfun'] ?? null;
             $cpf = $data['numcpf'] ?? null;
             $numcad = $data['numcad'] ?? null;
             $sitafa = $data['sitafa'] ?? null;
-            $departamento = $data['departamento'] ?? 'Geral';
+            $departamento = $data['departamento'] ?? "Não informado";
             $cargo = $data['cargo'] ?? 'Funcionario';
             $empresa = $data['numemp'] ?? 1;
 
-            if (!$nome || !$cpf) {
-                return;
-            }
+            if (!$nome || !$cpf) return;
 
-            /**
-             * BLOQUEIO / INATIVAÇÃO
-             */
             if ($sitafa == 2 || $sitafa == 7) {
                 $this->sitafa($data);
                 return;
             }
 
-            /**
-             * GERAR LOGIN
-             */
             $login = $this->generateUniqueUsername($nome);
 
             $primeiroNome = Str::before($nome, ' ');
             $sobrenome = Str::afterLast($nome, ' ');
 
-            /**
-             * CRIA USUÁRIO
-             */
             $user = new User();
-
             $user->cn = $nome;
             $user->givenname = $primeiroNome;
             $user->sn = $sobrenome;
             $user->displayname = $nome;
             $user->samaccountname = $login;
-
             $user->title = $cargo;
-
             $user->extensionattribute1 = $cpf;
             $user->extensionattribute3 = $numcad;
-
             $user->department = $departamento;
 
-            /**
-             * EMAIL
-             */
             if ($empresa == 1) {
-                $email=$login."@refrio.com.br";
-                $user->mail =$email;
-
-                $user->physicalDeliveryOfficeName = "JDI";
-
-            } elseif ($empresa == 301) {
-                $email=$login."@platlog.com.br";
+                $email = $login."@refrio.com.br";
                 $user->mail = $email;
-
                 $user->physicalDeliveryOfficeName = "JDI";
-
+            } elseif ($empresa == 301) {
+                $email = $login."@platlog.com.br";
+                $user->mail = $email;
+                $user->physicalDeliveryOfficeName = "JDI";
                 $user->streetAddress = "Rua Willhelm Winter,301";
                 $user->postalCode = "13213907";
                 $user->l = "Jundiaí";
@@ -141,16 +101,9 @@ class UsersImport implements
                 $user->co = "BRASIL";
             }
 
-            /**
-             * OU
-             */
             $user->inside("OU={$departamento},OU=JDI,OU=fastefood,DC=fastefood,DC=local");
-
             $user->save();
 
-            /**
-             * LOG
-             */
             LdapLog::create([
                 'usuario_nome' => $nome,
                 'samaccountname' => $login,
@@ -161,7 +114,6 @@ class UsersImport implements
             ]);
 
         } catch (\Throwable $e) {
-
             Log::error("Erro importando usuário", [
                 'linha' => $row->getIndex(),
                 'erro' => $e->getMessage()
@@ -169,9 +121,6 @@ class UsersImport implements
         }
     }
 
-    /**
-     * GERAR LOGIN ÚNICO
-     */
     private function generateUniqueUsername($nomeCompleto)
     {
         $nomeLimpo = Str::lower(Str::ascii($nomeCompleto));
@@ -179,57 +128,41 @@ class UsersImport implements
 
         $partes = array_values(array_filter(explode(' ', $nomeLimpo)));
 
-        $primeiro = $partes[0];
-        $ultimo = end($partes);
+        $primeiroNome = $partes[0];
+        $sobrenome = end($partes);
+        
+        // Tentativa 1: m.goncalves (Primeira letra + sobrenome)
+        $login = substr($primeiroNome, 0, 1).$sobrenome;
+        if ($this->isUsernameAvailable($login)) return $login;
 
-        $base = substr($primeiro . '.' . $ultimo, 0, 20);
-
-        $login = $base;
-        $i = 1;
-
-        while (!$this->isUsernameAvailable($login)) {
-
-            $login = substr($base, 0, 18) . $i;
-
-            $i++;
-
-            if ($i > 99) {
-                throw new \Exception("Não foi possível gerar login único");
+        // Tentativas seguintes: magoncalves, matgoncalves, mathgoncalves...
+        for ($i = 1; $i < strlen($primeiroNome); $i++) {
+            $login = substr($primeiroNome, 0, $i + 1) . $sobrenome;
+            if ($this->isUsernameAvailable($login)) {
+                return $login;
             }
         }
 
-        return $login;
+        throw new \Exception("Não foi possível gerar login único para: " . $nomeCompleto);
     }
 
-    /**
-     * VERIFICA LOGIN
-     */
     private function isUsernameAvailable($username)
     {
         return !User::where('samaccountname', '=', $username)->exists();
     }
 
-    /**
-     * BLOQUEIO / INATIVAÇÃO
-     */
     private function sitafa($data)
     {
-
         $user = User::where('extensionattribute1', $data['numcpf'])
             ->orWhere('extensionattribute3', $data['numcad'])
             ->first();
 
-        if (!$user) {
-            return;
-        }
+        if (!$user) return;
 
         if ($data['sitafa'] == 2) {
-
             $user->accountExpires = now();
             $acao = "EXPIRADO";
-
         } elseif ($data['sitafa'] == 7) {
-
             $user->userAccountControl = 514;
             $acao = "DESABILITADO";
         }
