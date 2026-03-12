@@ -43,6 +43,11 @@
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <span class="font-medium text-sm">Regras de Horário</span>
         </a>
+        
+        <a href="{{ route('admin.vip_users.index') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all {{ request()->routeIs('admin.vip_users.*') ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20' : 'hover:bg-slate-800 hover:text-white' }}">
+            <svg class="w-5 h-5 {{ request()->routeIs('admin.vip_users.*') ? 'text-white' : 'text-amber-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+            <span class="font-medium text-sm">Privilégios VIP</span>
+        </a>
 
         <div class="h-4"></div>
         <p class="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Auditoria</p>
@@ -78,7 +83,6 @@
 </aside>
 
 <style>
-    /* Estilo para afinar a barra de rolagem caso o menu cresça muito */
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }

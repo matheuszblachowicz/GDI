@@ -44,13 +44,22 @@ Route::middleware('auth')->group(function () {
         Route::get('/devices/{id}', [AdminController::class, 'showDevice'])->name('devices.show');
         Route::post('/devices/{id}/block', [AdminController::class, 'blockDevice'])->name('devices.block');
         Route::post('/admin/devices/{device}/unblock', [AdminController::class, 'unblockDevice'])->name('devices.unblock');
+        Route::put('/devices/{id}/update-location', [AdminController::class, 'updateLocation'])->name('devices.update-location');
+       
         
         // Regras de Horário (Rotas: admin.working_hours.index, admin.working_hours.store)
         Route::get('/working-hours', [AdminController::class, 'workingHours'])->name('working_hours.index');
         Route::post('/working-hours', [AdminController::class, 'storeWorkingHour'])->name('working_hours.store');
+        Route::get('/working-hours/{id}/edit', [AdminController::class, 'editWorkingHour'])->name('working_hours.edit');
+        Route::put('/working-hours/{id}', [AdminController::class, 'updateWorkingHour'])->name('working_hours.update');
+        Route::delete('/working-hours/{id}', [AdminController::class, 'destroyWorkingHour'])->name('working_hours.destroy');
 
         // Log de Atividades (Rota: admin.user_activity.index)
         Route::get('/user-activity', [AdminController::class, 'userActivity'])->name('user_activity.index');
+
+        Route::get('/vip-users', [AdminController::class, 'vipUsers'])->name('vip_users.index');
+        Route::post('/vip-users', [AdminController::class, 'storeVipUser'])->name('vip_users.store');
+        Route::delete('/vip-users/{id}', [AdminController::class, 'destroyVipUser'])->name('vip_users.destroy');
 
         // Whitelist de Aplicações (Rotas: admin.allowed_apps.index, admin.allowed_apps.store, admin.allowed_apps.destroy)
         // CORRIGIDO: Removido o "admin." de dentro do name()
@@ -61,6 +70,7 @@ Route::middleware('auth')->group(function () {
         // Mapa Global (Rota: admin.mapa)
         // CORRIGIDO: Nome apenas 'mapa', que com o grupo se torna 'admin.mapa'
         Route::get('/mapa', [AdminController::class, 'mapa'])->name('mapa');
+        Route::get('/devices-live-status', [AdminController::class, 'liveStatus'])->name('devices.live_status');
 
         Route::get('/ldap-logs', [AdminController::class, 'ldapLogs'])->name('ldap_logs.index');
         Route::post('/ldap-logs/notify', [AdminController::class, 'notifyManagers'])->name('ldap_logs.notify');

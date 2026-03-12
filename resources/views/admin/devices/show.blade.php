@@ -4,10 +4,16 @@
 
 @section('content')
 
+@if(session('success'))
+    <div class="mb-6 bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded-r-lg shadow-sm">
+        <p class="text-emerald-700 font-bold">{{ session('success') }}</p>
+    </div>
+@endif
+
 <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-10 mb-8 animate-fade-in">
     <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-10">
         <div class="flex items-center gap-8">
-            <div class="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center border-2 border-indigo-100 shadow-sm">
+            <div class="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center border-2 border-indigo-100 shadow-sm relative">
                 <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             </div>
             <div>
@@ -19,10 +25,15 @@
                     <span class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-xl text-sm font-black border border-indigo-200">
                         {{ $device->os_version }}
                     </span>
-                    <span class="text-slate-500 font-bold text-base flex items-center gap-2">
+                    
+                    <form action="{{ route('admin.devices.update-location', $device->id) }}" method="POST" class="flex items-center gap-2" title="Prima Enter para salvar">
+                        @csrf
+                        @method('PUT')
                         <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
-                        {{ $device->city ?? 'Localidade Desconhecida' }}
-                    </span>
+                        <input type="text" name="city" value="{{ $device->city }}" 
+                               class="bg-slate-50 border border-slate-200 hover:border-indigo-300 focus:border-indigo-500 focus:bg-white outline-none rounded-lg px-2 py-1 text-slate-600 font-bold text-base w-48 transition-all shadow-sm"
+                               onchange="this.form.submit()" placeholder="Definir cidade...">
+                    </form>
                     
                     @if($device->is_blocked)
                     <span class="px-4 py-2 bg-red-100 text-red-700 rounded-xl text-sm font-black border border-red-200 shadow-sm animate-pulse">
@@ -43,6 +54,9 @@
                 <p class="text-lg text-slate-800 font-black flex items-center gap-3">
                     <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
                     {{ $device->current_user ?? 'Desconhecido' }}
+                    @if($isVip)
+                        <span class="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-black uppercase tracking-widest border border-amber-200 shadow-sm" title="Utilizador com Liberação Total">👑 VIP</span>
+                    @endif
                 </p>
             </div>
         </div>
@@ -51,9 +65,9 @@
             <p class="text-sm font-black text-slate-500 mb-3 uppercase tracking-wider">Saúde do Ativo</p>
             <div class="flex items-center xl:justify-end gap-5">
                 <div class="w-full xl:w-40 bg-slate-200 rounded-full h-4 overflow-hidden shadow-inner">
-                    <div class="h-4 rounded-full transition-all duration-1000 {{ $complianceLevel >= 80 ? 'bg-emerald-500' : 'bg-red-500' }}" style="width: {{ $complianceLevel }}%"></div>
+                    <div class="h-4 rounded-full transition-all duration-1000 {{ $complianceLevel >= 80 ? 'bg-emerald-500' : ($isVip ? 'bg-amber-500' : 'bg-red-500') }}" style="width: {{ $complianceLevel }}%"></div>
                 </div>
-                <span class="text-4xl font-black {{ $complianceLevel >= 80 ? 'text-emerald-600' : 'text-red-600' }}">{{ $complianceLevel }}%</span>
+                <span class="text-4xl font-black {{ $complianceLevel >= 80 ? 'text-emerald-600' : ($isVip ? 'text-amber-600' : 'text-red-600') }}">{{ $complianceLevel }}%</span>
             </div>
         </div>
     </div>
@@ -75,12 +89,14 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 @forelse($device->applications as $app)
                     @php $isUnauthorized = isset($unauthorizedApps) && $unauthorizedApps->contains('name', $app->name); @endphp
-                    <div class="p-6 rounded-[1.5rem] border-2 flex items-center justify-between {{ $isUnauthorized ? 'bg-red-50 border-red-200 shadow-md' : 'bg-emerald-50/30 border-emerald-100 shadow-sm' }}">
+                    <div class="p-6 rounded-[1.5rem] border-2 flex items-center justify-between {{ $isUnauthorized && !$isVip ? 'bg-red-50 border-red-200 shadow-md' : ($isVip && $isUnauthorized ? 'bg-amber-50/30 border-amber-100 shadow-sm' : 'bg-emerald-50/30 border-emerald-100 shadow-sm') }}">
                         <div class="overflow-hidden">
-                            <span class="font-black text-lg {{ $isUnauthorized ? 'text-red-800' : 'text-emerald-800' }} block truncate" title="{{ $app->name }}">{{ $app->name }}</span>
+                            <span class="font-black text-lg {{ $isUnauthorized && !$isVip ? 'text-red-800' : ($isVip && $isUnauthorized ? 'text-amber-800' : 'text-emerald-800') }} block truncate" title="{{ $app->name }}">{{ $app->name }}</span>
                             <span class="text-xs text-slate-400 font-black font-mono">VERSÃO: {{ $app->version ?? '1.0' }}</span>
                         </div>
-                        @if($isUnauthorized)
+                        @if($isVip && $isUnauthorized)
+                            <span class="px-3 py-1.5 bg-amber-500 text-white text-[10px] font-black rounded-xl uppercase tracking-wider shadow-sm">Ignorado (VIP)</span>
+                        @elseif($isUnauthorized)
                             <span class="px-3 py-1.5 bg-red-600 text-white text-[10px] font-black rounded-xl uppercase tracking-wider shadow-sm">Alerta Não Autorizado</span>
                         @else
                             <span class="px-3 py-1.5 bg-emerald-600 text-white text-[10px] font-black rounded-xl uppercase tracking-wider shadow-sm">Autorizado</span>
@@ -98,23 +114,13 @@
             <div class="overflow-hidden border-2 border-slate-100 rounded-3xl shadow-sm">
                 <table class="w-full text-left text-base text-slate-600">
                     <thead class="bg-slate-50 text-slate-500 uppercase font-black text-xs border-b-2 border-slate-100">
-                        <tr>
-                            <th class="px-6 py-5">Data / Hora</th>
-                            <th class="px-6 py-5">Utilizador</th>
-                            <th class="px-6 py-5">Browser</th>
-                            <th class="px-6 py-5">Site / Janela</th>
-                        </tr>
+                        <tr><th class="px-6 py-5">Data / Hora</th><th class="px-6 py-5">Browser</th><th class="px-6 py-5">Site / Janela</th></tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 bg-white">
                         @forelse($webHistory as $log)
-                        <tr class="hover:bg-slate-50/80 transition">
-                            <td class="px-6 py-5 font-mono text-sm">{{ \Carbon\Carbon::parse($log->event_at)->format('d/m/Y H:i:s') }}</td>
-                            <td class="px-6 py-5 font-black text-slate-800">{{ $log->username }}</td>
-                            <td class="px-6 py-5"><span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-black uppercase">{{ str_replace('.exe', '', $log->process_name) }}</span></td>
-                            <td class="px-6 py-5 truncate max-w-md" title="{{ $log->active_window_title }}">{{ \Illuminate\Support\Str::limit($log->active_window_title, 70) }}</td>
-                        </tr>
+                        <tr class="hover:bg-slate-50/80 transition"><td class="px-6 py-5 font-mono text-sm">{{ \Carbon\Carbon::parse($log->event_at)->format('d/m/Y H:i:s') }}</td><td class="px-6 py-5"><span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-black uppercase">{{ str_replace('.exe', '', $log->process_name) }}</span></td><td class="px-6 py-5 truncate max-w-md">{{ \Illuminate\Support\Str::limit($log->active_window_title, 70) }}</td></tr>
                         @empty
-                        <tr><td colspan="4" class="px-6 py-16 text-center text-slate-400 italic">Sem logs de navegação.</td></tr>
+                        <tr><td colspan="3" class="px-6 py-16 text-center text-slate-400 italic">Sem logs de navegação.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -122,26 +128,16 @@
         </div>
 
         <div id="tab-activity" class="hidden animate-fade-in">
-             <div class="overflow-hidden border-2 border-slate-100 rounded-3xl shadow-sm">
+            <div class="overflow-hidden border-2 border-slate-100 rounded-3xl shadow-sm">
                 <table class="w-full text-left text-base text-slate-600">
                     <thead class="bg-slate-50 text-slate-500 uppercase font-black text-xs border-b-2 border-slate-100">
-                        <tr>
-                            <th class="px-6 py-5">Data / Hora</th>
-                            <th class="px-6 py-5">Utilizador</th>
-                            <th class="px-6 py-5">Processo</th>
-                            <th class="px-6 py-5">Janela</th>
-                        </tr>
+                        <tr><th class="px-6 py-5">Data / Hora</th><th class="px-6 py-5">Processo</th><th class="px-6 py-5">Janela</th></tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 bg-white">
                         @forelse($activityLogs as $log)
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="px-6 py-5 font-mono text-sm">{{ \Carbon\Carbon::parse($log->event_at)->format('d/m/Y H:i:s') }}</td>
-                            <td class="px-6 py-5 font-black text-slate-800">{{ $log->username }}</td>
-                            <td class="px-6 py-5 font-black text-indigo-600 uppercase text-xs">{{ $log->process_name }}</td>
-                            <td class="px-6 py-5 truncate max-w-md">{{ \Illuminate\Support\Str::limit($log->active_window_title, 80) }}</td>
-                        </tr>
+                        <tr class="hover:bg-slate-50 transition"><td class="px-6 py-5 font-mono text-sm">{{ \Carbon\Carbon::parse($log->event_at)->format('d/m/Y H:i:s') }}</td><td class="px-6 py-5 font-black text-indigo-600 uppercase text-xs">{{ $log->process_name }}</td><td class="px-6 py-5 truncate max-w-md">{{ \Illuminate\Support\Str::limit($log->active_window_title, 80) }}</td></tr>
                         @empty
-                        <tr><td colspan="4" class="px-6 py-16 text-center text-slate-400 italic">Sem atividade reportada.</td></tr>
+                        <tr><td colspan="3" class="px-6 py-16 text-center text-slate-400 italic">Sem atividade reportada.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -150,70 +146,38 @@
 
         <div id="tab-actions" class="hidden animate-fade-in">
             <div class="max-w-3xl mx-auto py-6 text-center">
-                
                 @if($device->is_blocked)
                     <h3 class="text-3xl font-black text-emerald-600 mb-6 uppercase tracking-tight">Desbloquear Estação</h3>
-                    <div class="bg-red-50 p-6 rounded-3xl mb-6 border-2 border-red-100 text-left">
-                        <p class="text-red-800 font-bold uppercase tracking-wider text-sm mb-2">Motivo do Bloqueio Atual:</p>
-                        <p class="text-red-600 text-lg">{{ $device->block_message }}</p>
-                    </div>
-                    
+                    <div class="bg-red-50 p-6 rounded-3xl mb-6 border-2 border-red-100 text-left"><p class="text-red-800 font-bold uppercase tracking-wider text-sm mb-2">Motivo do Bloqueio Atual:</p><p class="text-red-600 text-lg">{{ $device->block_message }}</p></div>
                     <form action="{{ route('admin.devices.unblock', $device->id) }}" method="POST" class="bg-emerald-50 p-10 rounded-[3rem] border-2 border-emerald-100 shadow-xl">
-                        @csrf
-                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-5 rounded-[2rem] font-black w-full shadow-2xl shadow-emerald-200 transition-all active:scale-95 uppercase tracking-widest text-lg">
-                            Desbloquear Estação e Liberar Acesso
-                        </button>
+                        @csrf <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-5 rounded-[2rem] font-black w-full shadow-2xl shadow-emerald-200 transition-all active:scale-95 uppercase tracking-widest text-lg">Desbloquear Estação e Liberar Acesso</button>
                     </form>
                 @else
                     <h3 class="text-3xl font-black text-red-600 mb-6 uppercase tracking-tight">Bloqueio Crítico</h3>
                     <form action="{{ route('admin.devices.block', $device->id) }}" method="POST" class="bg-red-50 p-10 rounded-[3rem] border-2 border-red-100 shadow-xl">
                         @csrf
-                        <div class="mb-8">
-                            <label class="block text-sm font-black text-red-900 mb-4 uppercase tracking-widest text-left">Mensagem de Bloqueio (visível para o utilizador):</label>
-                            <textarea name="block_message" rows="4" class="w-full border-red-200 p-6 rounded-[2rem] text-lg font-medium focus:ring-red-500 shadow-inner" placeholder="Ex: Violação de Segurança Identificada.">{{ $device->block_message ?? 'Acesso suspenso pela Administração de TI.' }}</textarea>
-                        </div>
-                        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-10 py-5 rounded-[2rem] font-black w-full shadow-2xl shadow-red-200 transition-all active:scale-95 uppercase tracking-widest text-lg">
-                            Confirmar Bloqueio da Estação
-                        </button>
+                        <div class="mb-8"><label class="block text-sm font-black text-red-900 mb-4 uppercase tracking-widest text-left">Mensagem de Bloqueio:</label><textarea name="block_message" rows="4" class="w-full border-red-200 p-6 rounded-[2rem] text-lg font-medium focus:ring-red-500 shadow-inner" placeholder="Ex: Violação de Segurança Identificada.">{{ $device->block_message ?? 'Acesso suspenso pela Administração de TI.' }}</textarea></div>
+                        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-10 py-5 rounded-[2rem] font-black w-full shadow-2xl shadow-red-200 transition-all active:scale-95 uppercase tracking-widest text-lg">Confirmar Bloqueio da Estação</button>
                     </form>
                 @endif
-                
             </div>
         </div>
     </div>
 </div>
 @endsection
 
-@push('styles')
-<style>
-    .animate-fade-in { animation: fadeIn 0.5s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-</style>
-@endpush
-
 @push('scripts')
 <script>
     function switchTab(tabName) {
         let isBlocked = {{ $device->is_blocked ? 'true' : 'false' }};
-        
         ['apps', 'web', 'activity', 'actions'].forEach(tab => {
             document.getElementById('tab-' + tab).classList.add('hidden');
-            let btn = document.getElementById('tab-btn-' + tab);
-            
-            // Estilo padrão inativo
-            btn.className = "flex-1 py-6 text-center text-base font-bold transition-all text-slate-500 hover:text-indigo-600 border-b-4 border-transparent " + 
-                            (tab==='actions' ? 'border-l border-slate-200 text-xs font-black' : '');
+            document.getElementById('tab-btn-' + tab).className = "flex-1 py-6 text-center text-base font-bold transition-all text-slate-500 hover:text-indigo-600 border-b-4 border-transparent " + (tab==='actions' ? 'border-l border-slate-200 text-xs font-black' : '');
         });
-        
         document.getElementById('tab-' + tabName).classList.remove('hidden');
         let activeBtn = document.getElementById('tab-btn-' + tabName);
-        
         if(tabName === 'actions') {
-            if(isBlocked) {
-                activeBtn.className = "flex-1 py-6 text-center text-xs font-black transition-all text-emerald-700 bg-emerald-50 border-b-4 border-emerald-600 border-l border-slate-200";
-            } else {
-                activeBtn.className = "flex-1 py-6 text-center text-xs font-black transition-all text-red-700 bg-red-50 border-b-4 border-red-600 border-l border-slate-200";
-            }
+            activeBtn.className = isBlocked ? "flex-1 py-6 text-center text-xs font-black transition-all text-emerald-700 bg-emerald-50 border-b-4 border-emerald-600 border-l border-slate-200" : "flex-1 py-6 text-center text-xs font-black transition-all text-red-700 bg-red-50 border-b-4 border-red-600 border-l border-slate-200";
         } else {
             activeBtn.className = "flex-1 py-6 text-center text-base font-black transition-all text-indigo-600 border-b-4 border-indigo-600 bg-white";
         }

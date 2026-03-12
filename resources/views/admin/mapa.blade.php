@@ -127,6 +127,8 @@
 <div class="map-container" id="mainMapContainer">
     <div id="map"></div>
 
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[3000] flex flex-col gap-3 pointer-events-none"></div>
+
     <div id="kioskTicker" class="kiosk-ticker font-hud">
         <div class="ticker-label">SATCOM LINK</div>
         <div class="ticker-content" id="tickerText">Aguardando dados da frota...</div>
@@ -374,11 +376,10 @@
 
         if (bounds.length > 0) mapInstance.fitBounds(bounds, { padding: [80, 80], maxZoom: 14 });
 
-        // RENDERIZAÇÃO DA SIDEBAR PRINCIPAL
+        // RENDERIZAÇÃO DA SIDEBAR PRINCIPAL E KIOSK... (CÓDIGO MANTIDO)
         function renderSidebar(q = '') {
             const list = document.getElementById('sidebarList');
             list.innerHTML = '';
-            
             locations.forEach((loc, i) => {
                 if (loc.city?.toLowerCase().includes(q.toLowerCase())) {
                     let isCritical = loc.type === 'blocked' || loc.machines.some(m => m.blocked);
@@ -413,7 +414,6 @@
             });
         }
         
-        // RENDERIZAÇÃO DA LISTA KIOSK DIREITA
         function renderKioskList() {
             const list = document.getElementById('kioskListContent');
             list.innerHTML = '';
@@ -443,6 +443,66 @@
     });
 
     // -----------------------------------------------------
+    // SISTEMA DE ALERTAS AO VIVO (POLLING)
+    // -----------------------------------------------------
+    let knownDevices = {};
+
+    // 1. Carrega o estado atual na inicialização para não disparar falsos alertas antigos
+    fetch('{{ route("admin.devices.live_status") }}')
+        .then(res => res.json())
+        .then(data => {
+            data.forEach(d => { knownDevices[d.id] = d.is_blocked; });
+            // 2. Inicia a verificação contínua a cada 5 segundos
+            setInterval(checkLiveStatus, 5000);
+        });
+
+    function checkLiveStatus() {
+        fetch('{{ route("admin.devices.live_status") }}')
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(device => {
+                    let previousState = knownDevices[device.id];
+                    let currentState = device.is_blocked;
+
+                    if (previousState !== undefined && previousState !== currentState) {
+                        // O status de bloqueio mudou desde a última verificação!
+                        if (currentState) {
+                            showToast('🚨 ALERTA CRÍTICO', `A máquina ${device.hostname} acabou de ser BLOQUEADA na rede!`, 'bg-red-600/90 border-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]');
+                        } else {
+                            showToast('✅ ACESSO RESTAURADO', `A máquina ${device.hostname} foi desbloqueada com sucesso.`, 'bg-emerald-600/90 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)]');
+                        }
+                    }
+                    // Atualiza a memória
+                    knownDevices[device.id] = currentState;
+                });
+            });
+    }
+
+    function showToast(title, message, styleClasses) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        
+        // Estilização e transições Tailwind
+        toast.className = `${styleClasses} text-white px-6 py-4 rounded-xl transform transition-all duration-500 translate-y-10 opacity-0 flex flex-col min-w-[320px] max-w-[400px] border pointer-events-auto backdrop-blur-md z-[3001]`;
+        
+        toast.innerHTML = `
+            <strong class="font-hud font-extrabold text-xs uppercase tracking-widest mb-1 drop-shadow-md">${title}</strong>
+            <span class="text-sm font-medium drop-shadow-md leading-tight">${message}</span>
+        `;
+        
+        container.appendChild(toast);
+
+        // Desliza para dentro (Animação de Entrada)
+        setTimeout(() => { toast.classList.remove('translate-y-10', 'opacity-0'); }, 50);
+
+        // Aguarda 6 segundos e desliza para a direita para sumir (Animação de Saída)
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-x-full');
+            setTimeout(() => toast.remove(), 500); // Remove o nó do DOM após a animação
+        }, 6000);
+    }
+
+    // -----------------------------------------------------
     // SISTEMA DE NAVEGAÇÃO E MODO NOC (QUIOSQUE)
     // -----------------------------------------------------
     let isSidebarHidden = false;
@@ -457,28 +517,18 @@
         isSidebarHidden = !isSidebarHidden;
 
         if (isSidebarHidden) {
-            // Esconder Modo Pesquisa -> Ativar Modo NOC (HUD + Alertas)
             sidebar.classList.add('-translate-x-[150%]', 'opacity-0');
             restoreBtn.classList.remove('opacity-0', 'pointer-events-none', '-translate-x-10');
-            
-            // Mostrar Painéis NOC
             hudLegend.classList.remove('opacity-0', 'translate-y-12', 'pointer-events-none');
             kioskLocationList.classList.remove('opacity-0', 'translate-x-12', 'pointer-events-none');
             kioskTicker.classList.remove('opacity-0', '-translate-y-[100%]');
-            
-            // Desloca botões de zoom Leaflet para não ficarem embaixo do HUD
             document.querySelector('.leaflet-bottom.leaflet-left').style.bottom = '100px';
         } else {
-            // Voltar ao Modo Pesquisa
             sidebar.classList.remove('-translate-x-[150%]', 'opacity-0');
             restoreBtn.classList.add('opacity-0', 'pointer-events-none', '-translate-x-10');
-            
-            // Ocultar Painéis NOC
             hudLegend.classList.add('opacity-0', 'translate-y-12', 'pointer-events-none');
             kioskLocationList.classList.add('opacity-0', 'translate-x-12', 'pointer-events-none');
             kioskTicker.classList.add('opacity-0', '-translate-y-[100%]');
-            
-            // Volta botões Leaflet ao normal
             document.querySelector('.leaflet-bottom.leaflet-left').style.bottom = '10px';
         }
     };
@@ -498,7 +548,6 @@
     // STREET VIEW
     // -----------------------------------------------------
     window.openStreetView = function(lat, lng) {
-        // Função utilitária para abrir o visualizador de panorama
         const showPano = (panoData) => {
             document.getElementById('street-view-container').style.display = 'block';
             panorama.setPano(panoData.location.pano);
@@ -507,46 +556,26 @@
             google.maps.event.trigger(panorama, 'resize');
         };
 
-        // 1ª Tentativa: Busca o Street View mais próximo num raio de 20 metros (Outdoor)
-        streetViewService.getPanorama({
-            location: { lat, lng },
-            radius: 20,
-            preference: google.maps.StreetViewPreference.NEAREST,
-            source: google.maps.StreetViewSource.OUTDOOR
+        streetViewService.getPanorama({ location: { lat, lng }, radius: 20, preference: google.maps.StreetViewPreference.NEAREST, source: google.maps.StreetViewSource.OUTDOOR
         }, (data, status) => {
-            if (status === "OK") {
-                showPano(data);
+            if (status === "OK") { showPano(data);
             } else {
-                // Fallback (2ª Tentativa): Busca qualquer visualização numa área maior de 200 metros
-                streetViewService.getPanorama({
-                    location: { lat, lng },
-                    radius: 200,
-                    preference: google.maps.StreetViewPreference.NEAREST
+                streetViewService.getPanorama({ location: { lat, lng }, radius: 200, preference: google.maps.StreetViewPreference.NEAREST
                 }, (fallbackData, fallbackStatus) => {
-                    if (fallbackStatus === "OK") {
-                        showPano(fallbackData);
-                    } else {
-                        alert("Visualização local indisponível para esta coordenada exata e nas redondezas.");
-                    }
+                    if (fallbackStatus === "OK") { showPano(fallbackData); } else { alert("Visualização local indisponível para esta coordenada exata."); }
                 });
             }
         });
     };
 
     window.closeStreetView = () => {
-        if (document.fullscreenElement === document.getElementById('street-view-container')) {
-            document.exitFullscreen();
-        }
+        if (document.fullscreenElement === document.getElementById('street-view-container')) { document.exitFullscreen(); }
         document.getElementById('street-view-container').style.display = 'none';
     };
 
     window.toggleStreetViewFullscreen = function() {
         const container = document.getElementById('street-view-container');
-        if (document.fullscreenElement !== container) { 
-            container.requestFullscreen().catch(e => console.error(e)); 
-        } else { 
-            document.exitFullscreen(); 
-        }
+        if (document.fullscreenElement !== container) { container.requestFullscreen().catch(e => console.error(e)); } else { document.exitFullscreen(); }
     };
     
     document.addEventListener('fullscreenchange', () => { 

@@ -104,6 +104,177 @@ class UsersImport implements
             $user->inside("OU={$departamento},OU=JDI,OU=fastefood,DC=fastefood,DC=local");
             $user->save();
 
+            $acessos=[
+                
+                      'Suprimentos' => [
+
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+
+                                         ],
+
+                      'Atendimento' => [ 
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+                                         ],
+
+                      'Controladoria' => [
+                        
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+
+                                         ],
+                      'Balanca' => [
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+                                         ],
+                      'Comercial' => [
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+                                         
+                                         ], 
+                      'Controle de Fretes' => [
+
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+
+                                         ],
+                       'Financeiro' => [
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+                                         
+                                         ],
+                       'Fiscal' => [
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+                                         
+                                         ],
+                       'Juridico' => [
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+                                         
+                                         ],
+                       'Manutencao' => [
+
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+                                         
+                                         ],
+
+                       'Ocorrencias' => [
+
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+                                         
+                                         ],
+                        'Rh Dp' => [
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+                                         
+                                         ],
+                        'Rouparia' => [
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+                                         
+                                         ],
+                        'Sac' => [
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+                                         
+                                         ],
+                        'Segurança do Trabalho' => [
+
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+
+                                         ],
+                        'Transporte'=>[
+
+                                         'Auxiliar' => [],
+                                         'Assistente' => [],
+                                         'Analista' => [],
+                                         'Supervior' => [], 
+                                         'Coordenador' => [], 
+                                         'Gerente' => []
+                                         
+                                         ], 
+            
+            
+            
+            ];
+
+                
+
+                    if(isset($acessos[$departamento][$cargo])){
+
+                        $grupos=$acessos[$departamento][$cargo];
+
+                        foreach($grupos as $grupo){
+                            $user->groups()->attach($grupo);
+                        }
+                    }else{
+
+            
             LdapLog::create([
                 'usuario_nome' => $nome,
                 'samaccountname' => $login,
@@ -112,6 +283,7 @@ class UsersImport implements
                 'departamento' => $departamento,
                 'detalhes' => 'Usuário criado via importação Excel'
             ]);
+                    } 
 
         } catch (\Throwable $e) {
             Log::error("Erro importando usuário", [

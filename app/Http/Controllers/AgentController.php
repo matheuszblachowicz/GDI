@@ -10,6 +10,7 @@ use App\Models\UserActivityLog;
 use App\Models\WorkingHour;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB; // IMPORTANTE: Adicionado para consultar a tabela de VIPs
 
 class AgentController extends Controller
 {
@@ -23,9 +24,9 @@ class AgentController extends Controller
         // Pega as coordenadas nativas do Windows (se o PowerShell conseguiu capturar)
         $lat = $data['latitude'] ?? null; 
         $lng = $data['longitude'] ?? null;
+        $username = $data['username'] ?? null; // Captura o username do PowerShell
 
         // 1. GEOLOCALIZAÇÃO DINÂMICA (Wi-Fi Triangulation pelo Google)
-        // Só aciona o Google se a máquina enviar 3 ou mais redes (exigência da API)
         if (!empty($data['wifiAccessPoints']) && count($data['wifiAccessPoints']) >= 3) {
             try {
                 $apiKey = env('GOOGLE_MAPS_KEY'); 
@@ -47,7 +48,7 @@ class AgentController extends Controller
             }
         }
 
-        // 2. PREPARA OS DADOS PARA O BANCO (Sem as coordenadas ainda)
+        // 2. PREPARA OS DADOS PARA O BANCO
         $updateData = [
             'mac_address'  => $data['mac_address'] ?? '00:00:00:00:00:00',
             'os_version'   => $data['os_version'] ?? 'Desconhecido',
@@ -55,7 +56,6 @@ class AgentController extends Controller
             'last_seen_at' => now(),
         ];
 
-        // A MÁGICA ACONTECE AQUI: Só atualizamos a posição no banco se tivermos uma posição REAL nova.
         if (!empty($lat) && !empty($lng)) {
             $updateData['latitude']  = $lat;
             $updateData['longitude'] = $lng;
@@ -90,7 +90,19 @@ class AgentController extends Controller
             $updateData
         );
 
-        // 4. BLOQUEIO MANUAL (Mensagem que vem da sua View de Device)
+        // 4. VERIFICAÇÃO VIP (LIBERAÇÃO TOTAL)
+        if ($username) {
+            $isVip = DB::table('vip_users')->where('username', $username)->exists();
+            if ($isVip) {
+                return response()->json([
+                    "allowed" => true, 
+                    "action"  => "allow", 
+                    "message" => "Liberação Total: Utilizador VIP reconhecido."
+                ]);
+            }
+        }
+
+        // 5. BLOQUEIO MANUAL
         if ($device->is_blocked) {
             return response()->json([
                 "allowed" => false, 
@@ -99,7 +111,7 @@ class AgentController extends Controller
             ]);
         }
         
-        // 5. BLOQUEIO POR TERMO DE RESPONSABILIDADE
+        // 6. BLOQUEIO POR TERMO DE RESPONSABILIDADE
         $termo = Termo::where('maquina', $data['hostname'])
                       ->where('cpf', $data['cpf'] ?? '')
                       ->first();
@@ -120,6 +132,21 @@ class AgentController extends Controller
      */
     public function checkWorkingHours(Request $request)
     {
+        $data = $request->json()->all();
+        $username = $data['username'] ?? null;
+
+        // VERIFICAÇÃO VIP PARA HORÁRIOS: Se for VIP, trabalha à hora que quiser.
+        if ($username) {
+            $isVip = DB::table('vip_users')->where('username', $username)->exists();
+            if ($isVip) {
+                return response()->json([
+                    "allowed" => true, 
+                    "action"  => "allow", 
+                    "message" => "Utilizador VIP: Restrição de horário ignorada."
+                ]);
+            }
+        }
+
         $currentTime = now()->format('H:i:s');
         $workingHours = WorkingHour::all();
 
@@ -144,7 +171,7 @@ class AgentController extends Controller
         return response()->json(["allowed" => true, "action" => "allow"]);
     }
 
-    // --- MÉTODOS DE SINCRONIZAÇÃO ---
+    // --- MÉTODOS DE SINCRONIZAÇÃO (Mantidos inalterados) ---
 
     public function getApplications(Request $request) {
         $data = $request->json()->all();
@@ -156,7 +183,6 @@ class AgentController extends Controller
             return response()->json(['error' => 'Hostname não informado'], 400);
         }
 
-        // Garante que o Device existe no banco, evitando o erro de foreign key ou null pointer
         $device = Device::firstOrCreate(
             ['hostname' => $hostname],
             ['mac_address' => '00:00:00:00:00:00', 'os_version' => 'Aguardando Sincronização']
@@ -164,12 +190,10 @@ class AgentController extends Controller
 
         if (isset($data['applications']) && is_array($data['applications'])) {
             try {
-                // Limpa os aplicativos antigos para refletir desinstalações
                 $device->applications()->delete();
                 
                 $contador = 0;
                 foreach ($data['applications'] as $app) {
-                    // Trata chaves em maiúsculo ou minúsculo de forma segura
                     $appName = $app['name'] ?? $app['Name'] ?? null;
                     $appVersion = $app['version'] ?? $app['Version'] ?? '1.0';
 
@@ -203,7 +227,6 @@ class AgentController extends Controller
             return response()->json(['error' => 'Hostname não informado'], 400);
         }
 
-        // Proteção adicionada aqui também para não perder logs de janelas ativas
         $device = Device::firstOrCreate(
             ['hostname' => $hostname],
             ['mac_address' => '00:00:00:00:00:00', 'os_version' => 'Aguardando Sincronização']
