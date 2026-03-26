@@ -14,16 +14,22 @@ class Device extends Model
         return $this->hasMany(DeviceApplication::class, 'device_id');
     }
 
-    // Relacionamento com o histórico de atividade
+    // Relacionamento COMPLETO com o histórico (traz todos os milhares de logs)
     public function activityLogs()
     {
         return $this->hasMany(UserActivityLog::class, 'device_id');
     }
 
-    // Acessor para obter o último utilizador ativo nesta máquina
+    // NOVO: Relacionamento ultra-rápido que traz APENAS o último log de cada máquina
+    public function latestActivityLog()
+    {
+        return $this->hasOne(UserActivityLog::class, 'device_id')->latestOfMany('event_at');
+    }
+
+    // Acessor ATUALIZADO para usar a nova relação sem fazer queries adicionais
     public function getCurrentUserAttribute()
     {
-        $lastLog = $this->activityLogs()->orderBy('event_at', 'desc')->first();
-        return $lastLog ? $lastLog->username : 'Sem registo';
+        // Lê diretamente da relação que foi carregada com o 'with()' no Controller
+        return $this->latestActivityLog ? $this->latestActivityLog->username : 'Sem registo';
     }
 }

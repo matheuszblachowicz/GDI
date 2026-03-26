@@ -5,12 +5,15 @@
 
 @section('content')
 <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+    
     <div class="mb-8 relative">
-        <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-            <svg class="h-6 w-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-        </div>
-        <input type="text" id="deviceSearch" placeholder="Pesquisar por Hostname, IP ou Versão do SO..." 
-               class="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner">
+        <form action="{{ route('admin.devices.index') }}" method="GET">
+            <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                <svg class="h-6 w-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+            <input type="text" name="search" value="{{ request('search') }}" placeholder="Pressione ENTER para pesquisar por Hostname, IP ou Versão do SO..." 
+                   class="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-inner">
+        </form>
     </div>
 
     <div class="overflow-x-auto">
@@ -25,7 +28,7 @@
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-                @foreach($devices as $device)
+                @forelse($devices as $device)
                 <tr class="hover:bg-slate-50/80 transition device-row">
                     <td class="py-5 px-4">
                         <span class="text-lg font-black text-slate-800">{{ $device->hostname }}</span>
@@ -49,21 +52,22 @@
                         </a>
                     </td>
                 </tr>
-                @endforeach
+                @empty
+                <tr>
+                    <td colspan="5" class="py-8 text-center text-slate-500 font-medium">
+                        Nenhuma máquina encontrada.
+                        @if(request('search'))
+                            <a href="{{ route('admin.devices.index') }}" class="text-indigo-600 hover:underline ml-2">Limpar pesquisa</a>
+                        @endif
+                    </td>
+                </tr>
+                @endforelse
             </tbody>
         </table>
     </div>
-</div>
 
-<script>
-    document.getElementById('deviceSearch').addEventListener('keyup', function() {
-        let filter = this.value.toLowerCase();
-        let rows = document.querySelectorAll('.device-row');
-        
-        rows.forEach(row => {
-            let text = row.innerText.toLowerCase();
-            row.style.display = text.includes(filter) ? '' : 'none';
-        });
-    });
-</script>
+    <div class="mt-8">
+        {{ $devices->links() }}
+    </div>
+</div>
 @endsection

@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class UserActivityLog extends Model
 {
-    // Como a PK é composta, desativamos o incremento simples para evitar erros no Eloquent
-    protected $primaryKey = ['id', 'event_at'];
-    public $incrementing = false; 
+    // Removemos a indicação da chave composta. O Laravel assumirá 
+    // automaticamente que a PK é 'id' (o padrão do sistema).
+    // O particionamento por ano continuará a operar de forma invisível no MySQL.
     
     protected $fillable = [
         'device_id', 'username', 'event_type', 
