@@ -14,4 +14,10 @@ class UserActivityLog extends Model
         'device_id', 'username', 'event_type', 
         'active_window_title', 'process_name', 'event_at'
     ];
+
+    public function device()
+    {
+        return $this->belongsTo(Device::class);
+    }
+
 }
