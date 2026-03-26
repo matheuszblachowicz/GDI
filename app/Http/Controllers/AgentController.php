@@ -8,9 +8,11 @@ use App\Models\Device;
 use App\Models\DeviceApplication;
 use App\Models\UserActivityLog;
 use App\Models\WorkingHour;
+use App\Mail\NewApplicationAlertMail; // Importação da nova Mailable para o alerta de software
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\DB; // IMPORTANTE: Adicionado para consultar a tabela de VIPs
+use Illuminate\Support\Facades\DB; // IMPORTANTE para consultar a tabela de VIPs
+use Illuminate\Support\Facades\Mail; // IMPORTANTE para envio de e-mail
 
 class AgentController extends Controller
 {
@@ -25,6 +27,7 @@ class AgentController extends Controller
         $lat = $data['latitude'] ?? null; 
         $lng = $data['longitude'] ?? null;
         $username = $data['username'] ?? null; // Captura o username do PowerShell
+       
 
         // 1. GEOLOCALIZAÇÃO DINÂMICA (Wi-Fi Triangulation pelo Google)
         if (!empty($data['wifiAccessPoints']) && count($data['wifiAccessPoints']) >= 3) {
@@ -90,7 +93,7 @@ class AgentController extends Controller
             $updateData
         );
 
-        // 4. VERIFICAÇÃO VIP (LIBERAÇÃO TOTAL)
+        // 4. VERIFICAÇÃO VIP (LIBERAÇÃO TOTAL) - MANTIDO!
         if ($username) {
             $isVip = DB::table('vip_users')->where('username', $username)->exists();
             if ($isVip) {
@@ -135,7 +138,7 @@ class AgentController extends Controller
         $data = $request->json()->all();
         $username = $data['username'] ?? null;
 
-        // VERIFICAÇÃO VIP PARA HORÁRIOS: Se for VIP, trabalha à hora que quiser.
+        // VERIFICAÇÃO VIP PARA HORÁRIOS: Se for VIP, trabalha à hora que quiser. - MANTIDO!
         if ($username) {
             $isVip = DB::table('vip_users')->where('username', $username)->exists();
             if ($isVip) {
@@ -171,13 +174,14 @@ class AgentController extends Controller
         return response()->json(["allowed" => true, "action" => "allow"]);
     }
 
-    // --- MÉTODOS DE SINCRONIZAÇÃO (Mantidos inalterados) ---
+    // --- MÉTODOS DE SINCRONIZAÇÃO E ANÁLISE DE APPS ---
 
     public function getApplications(Request $request) {
         $data = $request->json()->all();
         $hostname = $data['hostname'] ?? null;
+        $username = $data['username'] ?? 'Desconhecido';
 
-        Log::info("Recebendo lista de apps da máquina: {$hostname}");
+        Log::info("Recebendo lista de apps da máquina: ".$hostname);
 
         if (!$hostname) {
             return response()->json(['error' => 'Hostname não informado'], 400);
@@ -190,6 +194,9 @@ class AgentController extends Controller
 
         if (isset($data['applications']) && is_array($data['applications'])) {
             try {
+                // Pega a lista de aplicativos que já existem no banco ANTES de limpar (Para a IA saber o que é novo)
+                $existingApps = $device->applications()->pluck('name')->toArray();
+
                 $device->applications()->delete();
                 
                 $contador = 0;
@@ -203,6 +210,11 @@ class AgentController extends Controller
                             'version' => $appVersion
                         ]);
                         $contador++;
+
+                        // INTEGRAÇÃO GEMINI IA: Verifica se a aplicação é nova (não estava na lista anterior)
+                        if (!empty($existingApps) && !in_array($appName, $existingApps)) {
+                            $this->analyzeAndAlertNewApp($device, $appName, $username);
+                        }
                     }
                 }
                 
@@ -217,6 +229,45 @@ class AgentController extends Controller
 
         Log::warning("A máquina {$hostname} enviou o payload sem o array de applications.");
         return response()->json(['message' => 'Nenhum app recebido']);
+    }
+
+    /**
+     * Aciona a API do Gemini e envia email sobre nova instalação via Classe Mailable
+     */
+    private function analyzeAndAlertNewApp($device, $appName, $username)
+    {
+        try {
+            $geminiApiKey = env('GEMINI_API_KEY'); 
+
+            $prompt = "Aja como um especialista em segurança da informação. A aplicação Windows '{$appName}' foi instalada. Forneça estritamente: 1. Para que essa ferramenta é comumente usada. 2. Qual é o link oficial ou mais comum para download desta ferramenta.";
+
+            $aiAnalysis = "Análise Pendente - Configurar credencial GEMINI_API_KEY no arquivo .env.";
+
+            if ($geminiApiKey) {
+                $response = Http::post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={$geminiApiKey}", [
+                    "contents" => [
+                        ["role" => "user", "parts" => [["text" => $prompt]]]
+                    ]
+                ]);
+
+                if ($response->successful()) {
+                    $aiAnalysis = $response->json('candidates.0.content.parts.0.text') ?? 'Não foi possível extrair a resposta da IA.';
+                } else {
+                    Log::error("Erro ao consultar Gemini API: " . $response->body());
+                }
+            }
+
+            // Envia o e-mail estilizado usando a Classe Mailable criada
+            Mail::to('ti@platlog.com.br')->send(new NewApplicationAlertMail(
+                $device->hostname,
+                $username,
+                $appName,
+                $aiAnalysis
+            ));
+
+        } catch (\Exception $e) {
+            Log::error("Falha ao analisar e enviar alerta da nova aplicação {$appName}: " . $e->getMessage());
+        }
     }
 
     public function getUserInformation(Request $request) {
