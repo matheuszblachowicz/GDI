@@ -10,6 +10,23 @@
     </div>
 @endif
 
+<div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+    <a href="{{ route('admin.devices.index') }}" class="inline-flex items-center px-5 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-black hover:bg-slate-200 transition-all shadow-sm border border-slate-200">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        Voltar à Lista
+    </a>
+    <div class="flex gap-3">
+        <a href="{{ route('exports.device.pdf', $device->id) }}" class="inline-flex items-center px-5 py-2.5 rounded-xl bg-red-50 text-red-600 font-black hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+            PDF Completo
+        </a>
+        <a href="{{ route('exports.device.xlsx', $device->id) }}" class="inline-flex items-center px-5 py-2.5 rounded-xl bg-emerald-50 text-emerald-600 font-black hover:bg-emerald-500 hover:text-white transition-all shadow-sm border border-emerald-100">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Exportar Excel
+        </a>
+    </div>
+</div>
+
 <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-10 mb-8 animate-fade-in">
     <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-10">
         <div class="flex items-center gap-8">
@@ -88,7 +105,14 @@
             <h3 class="text-xl font-black text-slate-800 mb-8">Software Reportado</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 @forelse($device->applications as $app)
-                    @php $isUnauthorized = isset($unauthorizedApps) && $unauthorizedApps->contains('name', $app->name); @endphp
+                    @php 
+                        $isUnauthorized = false;
+                        if(isset($unauthorizedApps)) {
+                            // Convert to collection if it's an array to use contains, or handle directly
+                            $appsCollection = is_array($unauthorizedApps) ? collect($unauthorizedApps) : $unauthorizedApps;
+                            $isUnauthorized = $appsCollection->contains('name', $app->name);
+                        }
+                    @endphp
                     <div class="p-6 rounded-[1.5rem] border-2 flex items-center justify-between {{ $isUnauthorized && !$isVip ? 'bg-red-50 border-red-200 shadow-md' : ($isVip && $isUnauthorized ? 'bg-amber-50/30 border-amber-100 shadow-sm' : 'bg-emerald-50/30 border-emerald-100 shadow-sm') }}">
                         <div class="overflow-hidden">
                             <span class="font-black text-lg {{ $isUnauthorized && !$isVip ? 'text-red-800' : ($isVip && $isUnauthorized ? 'text-amber-800' : 'text-emerald-800') }} block truncate" title="{{ $app->name }}">{{ $app->name }}</span>

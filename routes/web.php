@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LdapController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ExportController;
 
 // -------------------------------------------------------------------------
 // ROTAS DE AUTENTICAÇÃO (LDAP)
@@ -87,4 +88,15 @@ Route::middleware('auth')->group(function () {
 
 
     });
+
+
+    Route::prefix('exports')->name('exports.')->group(function () {
+    // Relatórios Gerais (Todos os dispositivos)
+    Route::get('/devices/xlsx', [ExportController::class, 'allDevicesXlsx'])->name('devices.xlsx');
+    Route::get('/devices/pdf', [ExportController::class, 'allDevicesPdf'])->name('devices.pdf');
+    
+    // Relatórios Individuais (Por máquina)
+    Route::get('/device/{id}/xlsx', [ExportController::class, 'singleDeviceXlsx'])->name('device.xlsx');
+    Route::get('/device/{id}/pdf', [ExportController::class, 'singleDevicePdf'])->name('device.pdf');
+});
 });

@@ -6,6 +6,20 @@
 @section('content')
 <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
     
+    <div class="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+        <h2 class="text-2xl font-black text-slate-800 tracking-tight">Lista de Dispositivos</h2>
+        <div class="flex flex-wrap gap-3">
+            <a href="{{ route('exports.devices.pdf') }}" class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-red-50 text-red-600 font-black hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                Relatório PDF
+            </a>
+            <a href="{{ route('exports.devices.xlsx') }}" class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-emerald-50 text-emerald-600 font-black hover:bg-emerald-500 hover:text-white transition-all shadow-sm border border-emerald-100">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Exportar Excel
+            </a>
+        </div>
+    </div>
+
     <div class="mb-8 relative">
         <form action="{{ route('admin.devices.index') }}" method="GET">
             <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
