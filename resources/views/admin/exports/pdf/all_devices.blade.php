@@ -4,21 +4,41 @@
     <meta charset="UTF-8">
     <title>Dossiê de Auditoria Detalhado</title>
     <style>
+        /* === CONFIGURAÇÕES GERAIS === */
         @page { margin: 0px; }
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10px; color: #1e293b; margin: 0; padding: 0; background-color: #f8fafc; }
-        .content-wrap { padding: 30px 40px; }
+        .content-wrap { padding: 40px; }
         .page-break { page-break-after: always; }
         .avoid-break { page-break-inside: avoid; }
+        .text-center { text-align: center; } 
+        .text-right { text-align: right; }
+        .font-bold { font-weight: bold; } 
+        .text-red { color: #ef4444; }
         
-        .cover-page { background-color: #0f172a; color: white; height: 100%; position: relative; padding: 50px; }
-        .cover-header { margin-top: 150px; border-left: 8px solid #3b82f6; padding-left: 30px; }
+        /* === CAPA ESTRUTURADA (1 PÁGINA FIXA) === */
+        /* Uma página A4 tem aprox. 1123px de altura. Usamos 1050px para margem de segurança */
+        .cover-page { background-color: #0f172a; color: white; padding: 0 60px; height: 1050px; overflow: hidden; box-sizing: border-box; }
+        .cover-content { padding-top: 250px; }
+        .cover-header { border-left: 8px solid #3b82f6; padding-left: 30px; margin-bottom: 200px; }
         .cover-header h3 { color: #94a3b8; font-size: 16px; text-transform: uppercase; letter-spacing: 3px; margin: 0 0 10px 0; }
-        .cover-header h1 { color: #ffffff; font-size: 42px; margin: 0 0 15px 0; line-height: 1.1; }
+        .cover-header h1 { color: #ffffff; font-size: 44px; margin: 0 0 15px 0; line-height: 1.1; }
         .cover-header h2 { color: #3b82f6; font-size: 20px; margin: 0; font-weight: normal; }
-        .cover-footer { position: absolute; bottom: 80px; left: 80px; right: 80px; border-top: 1px solid #334155; padding-top: 20px; }
-        .cover-footer table { width: 100%; color: #94a3b8; font-size: 12px; }
-        .cover-footer strong { color: #ffffff; display: block; margin-bottom: 5px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .cover-info-box { background-color: #1e293b; border-top: 4px solid #3b82f6; padding: 25px; border-radius: 6px; }
+        .cover-info-table { width: 100%; border-collapse: collapse; }
+        .cover-info-table td { padding: 10px; vertical-align: top; border-right: 1px solid #334155; }
+        .cover-info-table td:last-child { border-right: none; }
+        .cover-info-table .label { color: #94a3b8; display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .cover-info-table .value { color: #ffffff; display: block; font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+        .cover-info-table .sub-value { font-size: 11px; }
 
+        /* === SUMÁRIO === */
+        .toc-title { font-size: 24px; color: #0f172a; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 30px; text-transform: uppercase; }
+        .toc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .toc-table td { padding: 15px 0; border-bottom: 1px dashed #cbd5e1; color: #334155; }
+        .toc-table td strong { color: #0f172a; }
+
+        /* === CABEÇALHOS E TABELAS === */
         .page-header { background-color: #ffffff; border-bottom: 2px solid #e2e8f0; padding: 15px 40px; }
         .page-header table { width: 100%; }
         .page-header .brand { font-size: 14px; font-weight: bold; color: #0f172a; }
@@ -40,8 +60,6 @@
         
         .badge { display: inline-block; padding: 3px 6px; border-radius: 4px; font-size: 7px; font-weight: bold; text-transform: uppercase; color: #ffffff; text-align: center; }
         .bg-emerald { background-color: #10b981; } .bg-red { background-color: #ef4444; } .bg-amber { background-color: #f59e0b; } .bg-slate { background-color: #64748b; }
-        
-        .text-center { text-align: center; } .font-bold { font-weight: bold; } .text-red { color: #ef4444; }
     </style>
 </head>
 <body>
@@ -111,6 +129,8 @@
         }
 
         $avgCompliance = $totalDevices > 0 ? round($totalCompliance / $totalDevices) : 0;
+        $activeDevices = $totalDevices - $blockedDevices;
+        
         arsort($osDistribution);
         
         uasort($allUnauthorizedApps, function($a, $b) {
@@ -125,18 +145,66 @@
     </script>
 
     <div class="cover-page page-break">
-        <div class="cover-header">
-            <h3>Confidencial - Uso Interno</h3>
-            <h1>Dossiê Completo de Auditoria,<br>Compliance e Segurança Web</h1>
-            <h2>Gerado pelo Sistema GDI</h2>
+        <div class="cover-content">
+            <div class="cover-header">
+                <h3>Confidencial - Uso Interno</h3>
+                <h1>Auditoria,<br>Compliance e Segurança Web</h1>
+                <h2>Gerado pelo Sistema GDI(PlatID)</h2>
+            </div>
+            
+            <div class="cover-info-box">
+                <table class="cover-info-table">
+                    <tr>
+                        <td width="30%">
+                            <span class="label">Data de Emissão</span>
+                            <span class="value">{{ now()->format('d/m/Y H:i') }}</span>
+                            <span class="sub-value" style="color: #94a3b8;">Gerado automaticamente</span>
+                        </td>
+                        <td width="35%" style="padding-left: 20px;">
+                            <span class="label">Âmbito Tecnológico</span>
+                            <span class="value">{{ $totalDevices }} Máquinas</span>
+                            <span class="sub-value">
+                                <span style="color: #10b981; font-weight: bold;">{{ $activeDevices }} Ativas</span> &bull; 
+                                <span style="color: #ef4444; font-weight: bold;">{{ $blockedDevices }} Bloqueadas</span>
+                            </span>
+                        </td>
+                        <td width="35%" style="padding-left: 20px;">
+                            <span class="label">Índice de Saúde Global</span>
+                            <span class="value" style="color: #3b82f6;">{{ $avgCompliance }}% Conformidade</span>
+                            <span class="sub-value" style="color: #94a3b8;">Média de segurança do parque</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-break" style="background: #ffffff; height: 1050px; box-sizing: border-box;">
+        <div class="page-header">
+            <table>
+                <tr><td class="brand">GDI <span>Security Audit</span></td><td class="doc-title">Sumário Executivo</td></tr>
+            </table>
         </div>
         
-        <div class="cover-footer">
-            <table>
+        <div class="content-wrap">
+            <h2 class="toc-title">Índice do Relatório</h2>
+            
+            <table class="toc-table">
                 <tr>
-                    <td width="33%"><strong>Data de Emissão</strong><br>{{ now()->format('d/m/Y \à\s H:i') }}</td>
-                    <td width="33%"><strong>Âmbito Tecnológico</strong><br>{{ $totalDevices }} Máquinas Analisadas</td>
-                    <td width="33%"><strong>Índice de Saúde Global</strong><br>{{ $avgCompliance }}% de Conformidade</td>
+                    <td width="90%"><strong>1. Análise Gráfica do Parque (Dashboard)</strong><br><span style="font-size: 11px;">Métricas gerais, distribuição de risco e sistemas operativos.</span></td>
+                    <td width="10%" class="text-right"><span style="color: #3b82f6; font-weight: bold;">Sec. 1</span></td>
+                </tr>
+                <tr>
+                    <td><strong>2. Mapeamento Detalhado de Software Irregular</strong><br><span style="font-size: 11px;">Identificação de aplicações não homologadas e focos de risco na rede.</span></td>
+                    <td class="text-right"><span style="color: #3b82f6; font-weight: bold;">Sec. 2</span></td>
+                </tr>
+                <tr>
+                    <td><strong>3. Auditoria Recente de Navegação Web</strong><br><span style="font-size: 11px;">Acessos, títulos de janelas e processos de browsers monitorizados.</span></td>
+                    <td class="text-right"><span style="color: #3b82f6; font-weight: bold;">Sec. 3</span></td>
+                </tr>
+                <tr>
+                    <td><strong>4. Matriz Geral de Ativos</strong><br><span style="font-size: 11px;">Listagem completa de todos os dispositivos, utilizadores, VIPs e compliance individual.</span></td>
+                    <td class="text-right"><span style="color: #3b82f6; font-weight: bold;">Sec. 4</span></td>
                 </tr>
             </table>
         </div>

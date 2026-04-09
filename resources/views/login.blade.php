@@ -30,7 +30,7 @@
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white mb-5 shadow-lg shadow-blue-200 transform transition hover:scale-105 duration-300">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                 </div>
-                <h2 class="text-3xl font-extrabold text-slate-800 tracking-tight">PlatTrust<span class="text-blue-600">AD</span></h2>
+                <h2 class="text-3xl font-extrabold text-slate-800 tracking-tight">Plat<span class="text-blue-600">ID</span></h2>
                 <p class="text-slate-500 text-sm font-medium mt-2">Plataforma de Gestão Platlog</p>
             </div>
 

@@ -1,7 +1,7 @@
 <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col min-h-screen transition-all duration-300 font-sans shadow-2xl relative z-20">
     <div class="h-20 flex items-center justify-center border-b border-slate-800 bg-slate-950/50">
         <div class="flex items-center gap-3">
-            <span class="text-xl font-black text-white tracking-wider">Plat<span class="text-blue-500">Trust</span></span>
+            <span class="text-xl font-black text-white tracking-wider">Plat<span class="text-blue-500">ID</span></span>
         </div>
     </div>
 

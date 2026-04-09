@@ -23,10 +23,12 @@ class AdminController extends Controller
 {
     /**
      * Otimizado: Recebe as listas como parâmetros para evitar o problema N+1.
+     * Corrigido: Agora extrai o utilizador da relação latestActivityLog.
      */
     private function calculateCompliance($device, array $vipsList, array $allowedAppsList)
     {
-        $isVip = in_array($device->current_user, $vipsList);
+        $currentUser = $device->latestActivityLog->username ?? null;
+        $isVip = in_array($currentUser, $vipsList);
         if ($isVip) return 100;
 
         $totalApps = $device->applications->count();
@@ -101,13 +103,16 @@ class AdminController extends Controller
 
     public function showDevice($id)
     {
-        $device = Device::with('applications')->findOrFail($id);
+        // Corrigido: Trazendo latestActivityLog junto na query para evitar null
+        $device = Device::with(['applications', 'latestActivityLog'])->findOrFail($id);
         
         // Carrega as listas para o cálculo
         $vipsList = DB::table('vip_users')->pluck('username')->toArray();
         $allowedAppsList = DB::table('allowed_applications')->pluck('name')->toArray();
         
-        $isVip = in_array($device->current_user, $vipsList);
+        // Corrigido: Pega o username do log recente
+        $currentUser = $device->latestActivityLog->username ?? null;
+        $isVip = in_array($currentUser, $vipsList);
         
         $unauthorizedApps = $device->applications->filter(function ($app) use ($allowedAppsList) {
             foreach ($allowedAppsList as $allowed) {
@@ -116,7 +121,7 @@ class AdminController extends Controller
             return true;
         });
 
-        // Otimizado: Usando o novo método calculateCompliance
+        // Otimizado: Usando o método calculateCompliance
         $complianceLevel = $this->calculateCompliance($device, $vipsList, $allowedAppsList);
         
         $webHistory = UserActivityLog::where('device_id', $id)->whereIn('process_name', ['chrome', 'msedge', 'firefox', 'brave', 'opera'])->orderBy('event_at', 'desc')->limit(100)->get();
@@ -239,16 +244,14 @@ class AdminController extends Controller
 
     public function mapa()
     {
-        // Otimizado: Faz Cache dos dados pesados do mapa por 5 minutos (300 segundos)
         $locations = Cache::remember('admin_mapa_locations', 300, function () {
             
-            // Otimizado: Removido 'activityLogs' daqui. O mapa só precisa das applications.
-            $devices = Device::with(['applications'])
+            // Corrigido: Incluído latestActivityLog na eager load
+            $devices = Device::with(['applications', 'latestActivityLog'])
                 ->where(function($query) { 
                     $query->whereNotNull('latitude')->whereNotNull('longitude')->orWhereNotNull('city'); 
                 })->get();
 
-            // Otimizado: Carregamos as regras apenas 1 vez para todo o mapa.
             $vipsList = DB::table('vip_users')->pluck('username')->toArray();
             $allowedAppsList = DB::table('allowed_applications')->pluck('name')->toArray();
 
@@ -264,7 +267,6 @@ class AdminController extends Controller
                 $normal = collect(); $blocked = collect(); $lowCompliance = collect();
                 
                 foreach ($group as $d) {
-                    // Otimizado: Usa as listas em memória, eliminando a query N+1.
                     $compliance = $this->calculateCompliance($d, $vipsList, $allowedAppsList);
                     $d->dynamic_compliance = $compliance; 
                     
@@ -279,7 +281,14 @@ class AdminController extends Controller
 
                 $mapMachines = function($machines) {
                     return $machines->map(function($d) { 
-                        return ['hostname' => $d->hostname, 'ip' => $d->ip_address, 'user' => $d->current_user ?? 'Sem registo', 'blocked' => $d->is_blocked, 'compliance' => $d->dynamic_compliance]; 
+                        return [
+                            'hostname' => $d->hostname, 
+                            'ip' => $d->ip_address, 
+                            // Corrigido: Lendo o usuário a partir do log
+                            'user' => $d->latestActivityLog->username ?? 'Sem registo', 
+                            'blocked' => $d->is_blocked, 
+                            'compliance' => $d->dynamic_compliance
+                        ]; 
                     })->toArray();
                 };
 
@@ -329,7 +338,6 @@ class AdminController extends Controller
             foreach ($gestores as $gestor) {
                 $corpoPersonalizado = str_replace(['[NOME_COLABORADOR]', '[LOGIN]', '[EMAIL_COLABORADOR]', '[NOME_GESTOR]', '[DATA]'], [$user->usuario_nome, $user->samaccountname, $emailExibicao, $gestor->name, now()->format('d/m/Y')], $template->body);
                 
-                // Otimizado: Substituído send() por queue() para disparo assíncrono
                 Mail::to($gestor->email)->queue(new ManagerNotificationMail($template->subject, $corpoPersonalizado));
                 $emailsEnviados++;
             }
