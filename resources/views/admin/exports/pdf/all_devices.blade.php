@@ -2,279 +2,312 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <title>Dossiê de Auditoria Detalhado</title>
+    <title>Relatório de Auditoria GDI - Confidencial</title>
     <style>
-        /* === CONFIGURAÇÕES GERAIS === */
-        @page { margin: 0px; }
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10px; color: #1e293b; margin: 0; padding: 0; background-color: #f8fafc; }
-        .content-wrap { padding: 40px; }
+        /* === NÚCLEO DE PERFORMANCE === */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @page { size: A4 landscape; margin: 0; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #1e293b; background: #ffffff; -webkit-font-smoothing: antialiased; }
+        
         .page-break { page-break-after: always; }
-        .avoid-break { page-break-inside: avoid; }
-        .text-center { text-align: center; } 
+        .text-center { text-align: center; }
         .text-right { text-align: right; }
-        .font-bold { font-weight: bold; } 
-        .text-red { color: #ef4444; }
         
-        /* === CAPA ESTRUTURADA (1 PÁGINA FIXA) === */
-        /* Uma página A4 tem aprox. 1123px de altura. Usamos 1050px para margem de segurança */
-        .cover-page { background-color: #0f172a; color: white; padding: 0 60px; height: 1050px; overflow: hidden; box-sizing: border-box; }
-        .cover-content { padding-top: 250px; }
-        .cover-header { border-left: 8px solid #3b82f6; padding-left: 30px; margin-bottom: 200px; }
-        .cover-header h3 { color: #94a3b8; font-size: 16px; text-transform: uppercase; letter-spacing: 3px; margin: 0 0 10px 0; }
-        .cover-header h1 { color: #ffffff; font-size: 44px; margin: 0 0 15px 0; line-height: 1.1; }
-        .cover-header h2 { color: #3b82f6; font-size: 20px; margin: 0; font-weight: normal; }
+        /* === CAPA ULTRA-PREMIUM === */
+        .cover { 
+            height: 210mm; width: 297mm; 
+            background-color: #060b14; /* Deep Obsidian */
+            color: #f8fafc; 
+            position: relative; 
+            overflow: hidden; 
+        }
         
-        .cover-info-box { background-color: #1e293b; border-top: 4px solid #3b82f6; padding: 25px; border-radius: 6px; }
-        .cover-info-table { width: 100%; border-collapse: collapse; }
-        .cover-info-table td { padding: 10px; vertical-align: top; border-right: 1px solid #334155; }
-        .cover-info-table td:last-child { border-right: none; }
-        .cover-info-table .label { color: #94a3b8; display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-        .cover-info-table .value { color: #ffffff; display: block; font-size: 16px; font-weight: bold; margin-bottom: 4px; }
-        .cover-info-table .sub-value { font-size: 11px; }
+        /* Malha/Grid Tecnológico no Fundo (Rápido para renderizar) */
+        .cover-grid {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
+            background-image: 
+                linear-gradient(rgba(14, 165, 233, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(14, 165, 233, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
 
-        /* === SUMÁRIO === */
-        .toc-title { font-size: 24px; color: #0f172a; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 30px; text-transform: uppercase; }
-        .toc-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        .toc-table td { padding: 15px 0; border-bottom: 1px dashed #cbd5e1; color: #334155; }
-        .toc-table td strong { color: #0f172a; }
-
-        /* === CABEÇALHOS E TABELAS === */
-        .page-header { background-color: #ffffff; border-bottom: 2px solid #e2e8f0; padding: 15px 40px; }
-        .page-header table { width: 100%; }
-        .page-header .brand { font-size: 14px; font-weight: bold; color: #0f172a; }
-        .page-header .brand span { color: #3b82f6; }
-        .page-header .doc-title { text-align: right; color: #64748b; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
-
-        h2.section-title { font-size: 18px; color: #0f172a; margin: 0 0 15px 0; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; display: inline-block; text-transform: uppercase; }
-        h3.chart-title { font-size: 12px; color: #334155; margin-bottom: 10px; text-transform: uppercase; font-weight: bold; }
+        /* Acentos Visuais Geométricos */
+        .cover-accent-1 { position: absolute; top: -10%; right: -5%; width: 40%; height: 120%; background: linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, rgba(6, 11, 20, 0) 100%); transform: rotate(15deg); z-index: 2; border-left: 1px solid rgba(14, 165, 233, 0.2); }
+        .cover-accent-2 { position: absolute; bottom: 10%; left: 0; width: 60%; height: 2px; background: linear-gradient(90deg, rgba(14, 165, 233, 0.8) 0%, transparent 100%); z-index: 2; }
         
-        .chart-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .chart-table td { padding: 4px 0; font-size: 10px; vertical-align: middle; }
-        .chart-bg { background-color: #e2e8f0; width: 100%; height: 10px; border-radius: 5px; overflow: hidden; display: block; }
-        .chart-fill { height: 10px; display: block; }
-
-        .data-table { width: 100%; border-collapse: collapse; background-color: #ffffff; border: 1px solid #cbd5e1; margin-bottom: 20px; }
-        .data-table th { background-color: #1e293b; color: #ffffff; font-size: 9px; text-transform: uppercase; padding: 8px; text-align: left; }
-        .data-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; font-size: 9px; vertical-align: middle; }
-        .data-table tbody tr:nth-child(even) { background-color: #f8fafc; }
+        .cover-content { position: relative; padding: 50mm 40mm; z-index: 10; }
         
-        .badge { display: inline-block; padding: 3px 6px; border-radius: 4px; font-size: 7px; font-weight: bold; text-transform: uppercase; color: #ffffff; text-align: center; }
-        .bg-emerald { background-color: #10b981; } .bg-red { background-color: #ef4444; } .bg-amber { background-color: #f59e0b; } .bg-slate { background-color: #64748b; }
+        /* Marcação de Segurança Superior */
+        .security-badge { display: inline-block; border: 1px solid #0ea5e9; color: #0ea5e9; font-size: 8px; text-transform: uppercase; letter-spacing: 2px; padding: 6px 12px; margin-bottom: 30px; background: rgba(14, 165, 233, 0.05); }
+
+        .cover-tag { color: #94a3b8; text-transform: uppercase; letter-spacing: 4px; font-weight: 600; margin-bottom: 15px; font-size: 11px; }
+        .cover-title { font-size: 46px; font-weight: 800; line-height: 1.1; margin-bottom: 25px; color: #ffffff; letter-spacing: -1px; }
+        .cover-subtitle { font-size: 16px; color: #cbd5e1; font-weight: 300; border-left: 3px solid #0ea5e9; padding-left: 20px; max-width: 600px; line-height: 1.5; }
+        
+        .cover-footer { position: absolute; bottom: 25mm; left: 40mm; width: calc(100% - 80mm); display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; z-index: 10; }
+        .cover-meta { display: inline-block; margin-right: 50px; }
+        .meta-label { font-size: 8px; text-transform: uppercase; color: #64748b; display: block; letter-spacing: 1.5px; margin-bottom: 4px; }
+        .meta-value { font-size: 16px; font-weight: 600; color: #e2e8f0; }
+
+        /* Marca d'água gigante no canto inferior direito */
+        .watermark { position: absolute; bottom: -20px; right: -20px; font-size: 200px; font-weight: 900; color: rgba(255,255,255,0.02); z-index: 2; line-height: 1; letter-spacing: -10px; pointer-events: none; }
+
+        /* === INTERIOR (Páginas Claras para Contraste) === */
+        .page-padding { padding: 20mm; height: 210mm; position: relative; }
+        
+        /* Cabeçalho das Páginas Internas */
+        .section-header { border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 30px; display: table; width: 100%; }
+        .sh-col-1 { display: table-cell; text-align: left; vertical-align: bottom; }
+        .sh-col-2 { display: table-cell; text-align: right; vertical-align: bottom; }
+        .brand { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: 1px; }
+        .brand span { color: #0ea5e9; font-weight: 400; }
+        .doc-id { font-size: 8px; color: #64748b; font-family: monospace; letter-spacing: 1px; }
+
+        /* === SUMÁRIO ESTRUTURADO === */
+        .toc-title { font-size: 22px; font-weight: 800; margin-bottom: 40px; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; }
+        .toc-item { border-bottom: 1px solid #e2e8f0; padding: 18px 0; display: table; width: 100%; }
+        .toc-num-cell { display: table-cell; width: 40px; vertical-align: top; }
+        .toc-content-cell { display: table-cell; vertical-align: top; }
+        .toc-number { color: #0ea5e9; font-weight: 800; font-size: 16px; }
+        .toc-text { font-size: 14px; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px; }
+        .toc-desc { font-size: 10px; color: #64748b; }
+
+        /* === DASHBOARD === */
+        .kpi-row { display: table; width: 100%; border-spacing: 15px 0; margin-left: -7.5px; margin-bottom: 30px; }
+        .kpi-card { display: table-cell; background: #ffffff; border: 1px solid #cbd5e1; border-top: 3px solid #0f172a; padding: 20px; width: 25%; }
+        .kpi-card.highlight { border-top: 3px solid #0ea5e9; background: #f8fafc; }
+        .kpi-title { font-size: 8px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; }
+        .kpi-val { font-size: 28px; font-weight: 800; color: #0f172a; margin-top: 8px; line-height: 1; }
+
+        .dash-split { display: table; width: 100%; table-layout: fixed; }
+        .dash-col { display: table-cell; width: 50%; padding-right: 30px; }
+        .dash-col:last-child { padding-right: 0; padding-left: 30px; border-left: 1px solid #e2e8f0; }
+        .chart-title { font-size: 11px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; }
+        
+        .stat-item { margin-bottom: 12px; }
+        .stat-header { display: table; width: 100%; margin-bottom: 4px; }
+        .stat-label { display: table-cell; text-align: left; font-size: 10px; color: #334155; }
+        .stat-val { display: table-cell; text-align: right; font-size: 10px; font-weight: 700; color: #0f172a; }
+        .compliance-bar { background: #e2e8f0; height: 4px; width: 100%; overflow: hidden; }
+        .compliance-fill { height: 100%; background: #0ea5e9; }
+
+        /* === TABELAS DE ALTA PERFORMANCE === */
+        .data-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 10px; border-bottom: 2px solid #0f172a; }
+        .data-table th { background: #0f172a; color: #ffffff; font-size: 8px; text-transform: uppercase; padding: 12px 10px; text-align: left; letter-spacing: 1px; border-right: 1px solid rgba(255,255,255,0.1); }
+        .data-table th:last-child { border-right: none; }
+        .data-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 9px; color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .data-table tr:nth-child(even) { background: #f8fafc; }
+        
+        /* STATUS BADGES REFINADOS */
+        .badge { padding: 4px 8px; font-weight: 700; font-size: 7px; text-transform: uppercase; letter-spacing: 1px; border-radius: 2px; }
+        .bg-success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+        .bg-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .bg-warning { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+        
+        .score-box { display: inline-block; padding: 4px 0; width: 40px; text-align: center; font-weight: 800; font-size: 10px; }
     </style>
 </head>
 <body>
 
-    @php
-        $totalDevices = $devices->count();
-        $blockedDevices = 0;
-        $vipDevices = 0;
-        $totalCompliance = 0;
+    <div class="cover page-break">
+        <div class="cover-grid"></div>
+        <div class="cover-accent-1"></div>
+        <div class="cover-accent-2"></div>
+        <div class="watermark">GDI</div>
         
-        $osDistribution = [];
-        $riskDistribution = ['Seguro (100%)' => 0, 'Atenção (80-99%)' => 0, 'Crítico (<80%)' => 0];
-        $allUnauthorizedApps = []; 
-
-        foreach($devices as $device) {
-            if($device->is_blocked) {
-                $blockedDevices++;
-            }
-            
-            $isVip = in_array($device->current_user, $vipsList);
-            if($isVip) {
-                $vipDevices++;
-            }
-
-            $os = $device->os_version ?? 'Desconhecido';
-            if(!isset($osDistribution[$os])) {
-                $osDistribution[$os] = 0;
-            }
-            $osDistribution[$os]++;
-
-            $comp = 0;
-            if ($isVip) { 
-                $comp = 100; 
-            } else {
-                $totalApps = $device->applications->count();
-                if ($totalApps > 0 && !empty($allowedAppsList)) {
-                    $unauth = $device->applications->filter(function($app) use ($allowedAppsList) {
-                        foreach($allowedAppsList as $allowed) {
-                            if(stripos($app->name, trim($allowed)) !== false) return false;
-                        }
-                        return true;
-                    });
-                    
-                    $comp = max(0, round((($totalApps - $unauth->count()) / $totalApps) * 100));
-                    
-                    foreach($unauth as $ua) {
-                        if(!isset($allUnauthorizedApps[$ua->name])) {
-                            $allUnauthorizedApps[$ua->name] = [];
-                        }
-                        if(!in_array($device->hostname, $allUnauthorizedApps[$ua->name])) {
-                            $allUnauthorizedApps[$ua->name][] = $device->hostname;
-                        }
-                    }
-                }
-            }
-            $device->calculated_compliance = $comp;
-            $device->is_vip_calculated = $isVip;
-            $totalCompliance += $comp;
-
-            if($comp == 100) {
-                $riskDistribution['Seguro (100%)']++;
-            } elseif($comp >= 80) {
-                $riskDistribution['Atenção (80-99%)']++;
-            } else {
-                $riskDistribution['Crítico (<80%)']++;
-            }
-        }
-
-        $avgCompliance = $totalDevices > 0 ? round($totalCompliance / $totalDevices) : 0;
-        $activeDevices = $totalDevices - $blockedDevices;
-        
-        arsort($osDistribution);
-        
-        uasort($allUnauthorizedApps, function($a, $b) {
-            return count($b) <=> count($a);
-        });
-    @endphp
-
-    <script type="text/php">
-        if (isset($pdf)) {
-            $pdf->page_text(750, 570, "Pág. {PAGE_NUM} / {PAGE_COUNT}", $fontMetrics->get_font("helvetica", "bold"), 8, array(0.4, 0.4, 0.4));
-        }
-    </script>
-
-    <div class="cover-page page-break">
         <div class="cover-content">
-            <div class="cover-header">
-                <h3>Confidencial - Uso Interno</h3>
-                <h1>Auditoria,<br>Compliance e Segurança Web</h1>
-                <h2>Gerado pelo Sistema GDI(PlatID)</h2>
+            <div class="security-badge">Documento Restrito &bull; TLP: Amber</div>
+            <div class="cover-tag">Relatório Analítico de Sistemas</div>
+            <h1 class="cover-title">Auditoria de Inventário<br>e Conformidade de Ativos</h1>
+            <div class="cover-subtitle">Mapeamento estrutural, identificação de vulnerabilidades sistêmicas e consolidação de hardware e software não homologado.</div>
+        </div>
+        
+        <div class="cover-footer">
+            <div>
+                <div class="cover-meta">
+                    <span class="meta-label">Data de Emissão</span>
+                    <span class="meta-value">{{ now()->format('d M Y, H:i') }}</span>
+                </div>
+                <div class="cover-meta">
+                    <span class="meta-label">Escopo Avaliado</span>
+                    <span class="meta-value">{{ $totalDevices }} Máquinas</span>
+                </div>
             </div>
-            
-            <div class="cover-info-box">
-                <table class="cover-info-table">
+            <div>
+                <div class="cover-meta" style="margin-right: 0; text-align: right;">
+                    <span class="meta-label">Compliance Global</span>
+                    <span class="meta-value" style="color: #0ea5e9; font-size: 24px;">{{ $avgCompliance }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-padding page-break">
+        <div class="section-header">
+            <div class="sh-col-1"><div class="brand">GDI<span>PLATLOG</span></div></div>
+            <div class="sh-col-2"><div class="doc-id">DOC_ID: GDI-{{ now()->format('Ymd-Hi') }}</div></div>
+        </div>
+        
+        <h2 class="toc-title">Índice Analítico</h2>
+        
+        <div class="toc-item">
+            <div class="toc-num-cell"><span class="toc-number">01</span></div>
+            <div class="toc-content-cell">
+                <span class="toc-text">Resumo Executivo e Dashboard de Risco</span>
+                <span class="toc-desc">Visão panorâmica de conformidade global, alertas críticos e distribuição física e lógica do parque tecnológico.</span>
+            </div>
+        </div>
+        
+        <div class="toc-item">
+            <div class="toc-num-cell"><span class="toc-number">02</span></div>
+            <div class="toc-content-cell">
+                <span class="toc-text">Matriz de Inventário e Status de Endpoint</span>
+                <span class="toc-desc">Listagem técnica detalhada de dispositivos, especificações de hardware (CPU, RAM, Disco) e status de rede.</span>
+            </div>
+        </div>
+        
+        <div class="toc-item">
+            <div class="toc-num-cell"><span class="toc-number">03</span></div>
+            <div class="toc-content-cell">
+                <span class="toc-text">Mapeamento de Software Não Homologado</span>
+                <span class="toc-desc">Relatório de incidentes e identificação de aplicações fora da política de segurança instaladas no ambiente.</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-padding page-break">
+        <div class="section-header">
+            <div class="sh-col-1"><div class="brand">01. <span>DASHBOARD ANALÍTICO</span></div></div>
+            <div class="sh-col-2"><div class="doc-id">Visão Geral do Parque</div></div>
+        </div>
+        
+        <div class="kpi-row">
+            <div class="kpi-card highlight">
+                <span class="kpi-title">Média de Compliance</span>
+                <div class="kpi-val" style="color: #0ea5e9;">{{ $avgCompliance }}%</div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-title">Dispositivos Ativos</span>
+                <div class="kpi-val">{{ $activeDevices }}</div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-title">Bloqueios Ativos</span>
+                <div class="kpi-val" style="color: #dc2626;">{{ $blockedDevices }}</div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-title">Hosts em Risco Crítico</span>
+                <div class="kpi-val">{{ $riskDistribution['Crítico (<80%)'] ?? 0 }}</div>
+            </div>
+        </div>
+
+        <div class="dash-split">
+            <div class="dash-col">
+                <div class="chart-title">Sistemas Operacionais Identificados</div>
+                @foreach(array_slice($osDistribution, 0, 6) as $os => $qtd)
+                    <div class="stat-item">
+                        <div class="stat-header">
+                            <div class="stat-label">{{ $os }}</div>
+                            <div class="stat-val">{{ $qtd }} un.</div>
+                        </div>
+                        <div class="compliance-bar"><div class="compliance-fill" style="width: {{ ($totalDevices > 0 ? ($qtd/$totalDevices)*100 : 0) }}%"></div></div>
+                    </div>
+                @endforeach
+            </div>
+            <div class="dash-col">
+                <div class="chart-title">Distribuição de Memória (RAM)</div>
+                @foreach(array_slice($ramDistribution, 0, 6) as $ram => $qtd)
+                    <div class="stat-item">
+                        <div class="stat-header">
+                            <div class="stat-label">{{ $ram }}</div>
+                            <div class="stat-val">{{ $qtd }} un.</div>
+                        </div>
+                        <div class="compliance-bar"><div class="compliance-fill" style="width: {{ ($totalDevices > 0 ? ($qtd/$totalDevices)*100 : 0) }}%; background: #64748b;"></div></div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+
+    @foreach($devices->chunk(30) as $chunkIndex => $deviceChunk)
+    <div class="page-padding page-break">
+        <div class="section-header">
+            <div class="sh-col-1"><div class="brand">02. <span>MATRIZ DE INVENTÁRIO</span></div></div>
+            <div class="sh-col-2"><div class="doc-id">Página {{ $chunkIndex + 1 }}</div></div>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 15%">Hostname</th>
+                    <th style="width: 14%">Endereço IP</th>
+                    <th style="width: 15%">Utilizador</th>
+                    <th style="width: 25%">Processador / SO</th>
+                    <th style="width: 11%">RAM / Disco</th>
+                    <th style="width: 10%" class="text-center">Status</th>
+                    <th style="width: 10%" class="text-center">Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($deviceChunk as $device)
                     <tr>
-                        <td width="30%">
-                            <span class="label">Data de Emissão</span>
-                            <span class="value">{{ now()->format('d/m/Y H:i') }}</span>
-                            <span class="sub-value" style="color: #94a3b8;">Gerado automaticamente</span>
+                        <td class="font-bold" style="color: #0f172a;">{{ $device->hostname }}</td>
+                        <td style="font-family: monospace;">
+                            {{ $device->ip_address ?? 'N/A' }}<br>
+                            <span style="font-family: sans-serif; color: #94a3b8; font-size: 8px;">{{ $device->city ?? 'Local não inf.' }}</span>
                         </td>
-                        <td width="35%" style="padding-left: 20px;">
-                            <span class="label">Âmbito Tecnológico</span>
-                            <span class="value">{{ $totalDevices }} Máquinas</span>
-                            <span class="sub-value">
-                                <span style="color: #10b981; font-weight: bold;">{{ $activeDevices }} Ativas</span> &bull; 
-                                <span style="color: #ef4444; font-weight: bold;">{{ $blockedDevices }} Bloqueadas</span>
+                        <td>
+                            {{ \Illuminate\Support\Str::limit($device->current_user ?? 'Sem Registo', 15) }}<br>
+                            @if($device->is_vip_view) <span class="badge bg-warning" style="padding: 2px 4px; font-size: 6px;">VIP</span> @endif
+                        </td>
+                        <td>
+                            <span style="color: #0f172a; font-weight: 600;">{{ \Illuminate\Support\Str::limit($device->cpu ?? 'NC', 30) }}</span><br>
+                            <span style="color: #64748b; font-size: 8px;">{{ \Illuminate\Support\Str::limit($device->os_version ?? 'NC', 30) }}</span>
+                        </td>
+                        <td>
+                            <strong style="color: #0ea5e9;">{{ $device->ram ?? 'NC' }}</strong><br>
+                            <span style="color: #64748b; font-size: 8px;">{{ $device->storage ?? 'NC' }}</span>
+                        </td>
+                        <td class="text-center">
+                            @if($device->is_blocked) 
+                                <span class="badge bg-error">Bloq.</span> 
+                            @else 
+                                <span class="badge bg-success">Ativo</span> 
+                            @endif
+                        </td>
+                        <td class="text-center">
+                            @php $score = $device->compliance_score ?? 0; @endphp
+                            <span class="score-box" style="color: {{ $score >= 80 ? '#059669' : ($device->is_vip_view ? '#d97706' : '#dc2626') }};">
+                                {{ $score }}%
                             </span>
                         </td>
-                        <td width="35%" style="padding-left: 20px;">
-                            <span class="label">Índice de Saúde Global</span>
-                            <span class="value" style="color: #3b82f6;">{{ $avgCompliance }}% Conformidade</span>
-                            <span class="sub-value" style="color: #94a3b8;">Média de segurança do parque</span>
-                        </td>
                     </tr>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="page-break" style="background: #ffffff; height: 1050px; box-sizing: border-box;">
-        <div class="page-header">
-            <table>
-                <tr><td class="brand">GDI <span>Security Audit</span></td><td class="doc-title">Sumário Executivo</td></tr>
-            </table>
-        </div>
-        
-        <div class="content-wrap">
-            <h2 class="toc-title">Índice do Relatório</h2>
-            
-            <table class="toc-table">
-                <tr>
-                    <td width="90%"><strong>1. Análise Gráfica do Parque (Dashboard)</strong><br><span style="font-size: 11px;">Métricas gerais, distribuição de risco e sistemas operativos.</span></td>
-                    <td width="10%" class="text-right"><span style="color: #3b82f6; font-weight: bold;">Sec. 1</span></td>
-                </tr>
-                <tr>
-                    <td><strong>2. Mapeamento Detalhado de Software Irregular</strong><br><span style="font-size: 11px;">Identificação de aplicações não homologadas e focos de risco na rede.</span></td>
-                    <td class="text-right"><span style="color: #3b82f6; font-weight: bold;">Sec. 2</span></td>
-                </tr>
-                <tr>
-                    <td><strong>3. Auditoria Recente de Navegação Web</strong><br><span style="font-size: 11px;">Acessos, títulos de janelas e processos de browsers monitorizados.</span></td>
-                    <td class="text-right"><span style="color: #3b82f6; font-weight: bold;">Sec. 3</span></td>
-                </tr>
-                <tr>
-                    <td><strong>4. Matriz Geral de Ativos</strong><br><span style="font-size: 11px;">Listagem completa de todos os dispositivos, utilizadores, VIPs e compliance individual.</span></td>
-                    <td class="text-right"><span style="color: #3b82f6; font-weight: bold;">Sec. 4</span></td>
-                </tr>
-            </table>
-        </div>
-    </div>
-
-    <div class="page-header">
-        <table>
-            <tr><td class="brand">GDI <span>Security Audit</span></td><td class="doc-title">Relatório Detalhado &bull; {{ now()->format('d/m/Y') }}</td></tr>
+                @endforeach
+            </tbody>
         </table>
     </div>
+    @endforeach
 
-    <div class="content-wrap">
-        <h2 class="section-title">1. Análise Gráfica do Parque (Dashboard)</h2>
-        <table width="100%" style="margin-bottom: 30px; border-spacing: 20px 0; margin-left: -20px;">
-            <tr>
-                <td width="50%" style="background: #ffffff; border: 1px solid #cbd5e1; padding: 15px; border-radius: 6px; vertical-align: top;">
-                    <h3 class="chart-title">Distribuição de Risco (Compliance)</h3>
-                    <table class="chart-table">
-                        @foreach($riskDistribution as $label => $qtd)
-                            @php 
-                                $pct = $totalDevices > 0 ? ($qtd / $totalDevices) * 100 : 0; 
-                                $color = str_contains($label, 'Seguro') ? '#10b981' : (str_contains($label, 'Crítico') ? '#ef4444' : '#f59e0b');
-                            @endphp
-                            <tr>
-                                <td width="30%"><strong>{{ $label }}</strong></td>
-                                <td width="55%">
-                                    <div class="chart-bg"><div class="chart-fill" style="width: {{ $pct }}%; background-color: {{ $color }};"></div></div>
-                                </td>
-                                <td width="15%" class="text-center">{{ $qtd }} maq. ({{ round($pct) }}%)</td>
-                            </tr>
-                        @endforeach
-                    </table>
-                </td>
-                
-                <td width="50%" style="background: #ffffff; border: 1px solid #cbd5e1; padding: 15px; border-radius: 6px; vertical-align: top;">
-                    <h3 class="chart-title">Fragmentação de Sistemas Operativos</h3>
-                    <table class="chart-table">
-                        @foreach(array_slice($osDistribution, 0, 5) as $os => $qtd)
-                            @php $pct = $totalDevices > 0 ? ($qtd / $totalDevices) * 100 : 0; @endphp
-                            <tr>
-                                <td width="40%"><strong>{{ \Illuminate\Support\Str::limit($os, 20) }}</strong></td>
-                                <td width="45%">
-                                    <div class="chart-bg"><div class="chart-fill" style="width: {{ $pct }}%; background-color: #3b82f6;"></div></div>
-                                </td>
-                                <td width="15%" class="text-center">{{ $qtd }} maq.</td>
-                            </tr>
-                        @endforeach
-                    </table>
-                </td>
-            </tr>
-        </table>
-
-        <div class="page-break"></div>
-        <h2 class="section-title">2. Mapeamento Detalhado de Software Irregular</h2>
+    <div class="page-padding">
+        <div class="section-header">
+            <div class="sh-col-1"><div class="brand">03. <span>SOFTWARE NÃO HOMOLOGADO</span></div></div>
+            <div class="sh-col-2"><div class="doc-id">Incidentes de Segurança</div></div>
+        </div>
 
         @if(count($allUnauthorizedApps) > 0)
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th width="35%">Software Não Homologado</th>
-                        <th width="10%" class="text-center">Qtd. Máquinas</th>
-                        <th width="55%">Hostnames Identificados (Foco de Risco)</th>
+                        <th style="width: 30%">Aplicação Detectada</th>
+                        <th style="width: 10%" class="text-center">Ocorrências</th>
+                        <th style="width: 60%">Hostnames Afetados (Foco de Risco)</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($allUnauthorizedApps as $appName => $hostnames)
-                        <tr class="avoid-break">
-                            <td class="font-bold text-red">{{ $appName }}</td>
-                            <td class="text-center font-bold">{{ count($hostnames) }}</td>
-                            <td style="font-family: monospace; color: #475569; line-height: 1.4;">
+                        <tr>
+                            <td class="font-bold" style="color: #dc2626;">{{ $appName }}</td>
+                            <td class="text-center font-bold" style="color: #0f172a; font-size: 11px;">{{ count($hostnames) }}</td>
+                            <td style="font-family: monospace; color: #475569; line-height: 1.6; white-space: normal; word-wrap: break-word;">
                                 {{ implode(', ', $hostnames) }}
                             </td>
                         </tr>
@@ -282,97 +315,12 @@
                 </tbody>
             </table>
         @else
-            <div style="background: #ecfdf5; border: 1px solid #10b981; padding: 20px; text-align: center; color: #047857; font-weight: bold;">
-                Nenhum software irregular identificado na rede. Compliance Perfeito.
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #10b981; padding: 30px; margin-top: 20px;">
+                <h3 style="color: #059669; font-size: 14px; margin-bottom: 5px;">Conformidade Perfeita</h3>
+                <p style="color: #64748b; font-size: 11px;">Nenhuma aplicação irregular ou fora das diretrizes de segurança foi identificada nos dispositivos auditados.</p>
             </div>
         @endif
-
-        <div class="page-break"></div>
-        <h2 class="section-title">3. Auditoria Recente de Navegação Web</h2>
-
-        @if(count($webHistory) > 0)
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th width="15%">Data / Hora</th>
-                        <th width="15%">Hostname</th>
-                        <th width="15%">Utilizador</th>
-                        <th width="10%">Browser</th>
-                        <th width="45%">Título da Janela / Site Acedido</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($webHistory as $log)
-                        <tr class="avoid-break">
-                            <td>{{ \Carbon\Carbon::parse($log->event_at)->format('d/m/Y H:i:s') }}</td>
-                            <td class="font-bold">{{ $log->device->hostname ?? 'N/A' }}</td>
-                            <td>{{ $log->username }}</td>
-                            <td><span class="badge bg-slate">{{ str_replace('.exe', '', $log->process_name) }}</span></td>
-                            <td style="color: #334155;">{{ \Illuminate\Support\Str::limit($log->active_window_title, 80) }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        @else
-            <div style="background: #f8fafc; border: 1px dashed #cbd5e1; padding: 20px; text-align: center; color: #64748b;">
-                Sem dados de navegação web recentes capturados.
-            </div>
-        @endif
-
-        <div class="page-break"></div>
-        <h2 class="section-title">4. Matriz Geral de Ativos</h2>
-        
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th width="15%">Hostname</th>
-                    <th width="15%">Endereço IP</th>
-                    <th width="20%">Utilizador Ativo</th>
-                    <th width="15%">Localização</th>
-                    <th width="10%" class="text-center">VIP</th>
-                    <th width="10%" class="text-center">Status</th>
-                    <th width="15%" class="text-center">Compliance</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if($devices->count() > 0)
-                    @foreach($devices as $device)
-                        <tr class="avoid-break">
-                            <td class="font-bold">{{ $device->hostname }}</td>
-                            <td style="font-family: monospace;">{{ $device->ip_address ?? 'N/A' }}</td>
-                            <td>{{ $device->current_user ?? 'Sem Registo' }}</td>
-                            <td>{{ $device->city ?? 'N/A' }}</td>
-                            
-                            <td class="text-center">
-                                @if($device->is_vip_calculated)
-                                    <span class="badge bg-amber">Sim</span>
-                                @else
-                                    Não
-                                @endif
-                            </td>
-                            
-                            <td class="text-center">
-                                @if($device->is_blocked)
-                                    <span class="badge bg-red">Bloqueado</span>
-                                @else
-                                    <span class="badge bg-emerald">Ativo</span>
-                                @endif
-                            </td>
-                            
-                            <td class="text-center font-bold" style="color: {{ $device->calculated_compliance >= 80 ? '#10b981' : ($device->is_vip_calculated ? '#f59e0b' : '#ef4444') }}; font-size: 11px;">
-                                {{ $device->calculated_compliance }}%
-                            </td>
-                        </tr>
-                    @endforeach
-                @else
-                    <tr>
-                        <td colspan="7" class="text-center" style="padding: 20px; color: #64748b;">
-                            Nenhum dispositivo encontrado no sistema.
-                        </td>
-                    </tr>
-                @endif
-            </tbody>
-        </table>
     </div>
+
 </body>
 </html>

@@ -51,11 +51,15 @@ class AgentController extends Controller
             }
         }
 
-        // 2. PREPARA OS DADOS PARA O BANCO
+        // 2. PREPARA OS DADOS PARA O BANCO (AGORA COM HARDWARE)
         $updateData = [
             'mac_address'  => $data['mac_address'] ?? '00:00:00:00:00:00',
             'os_version'   => $data['os_version'] ?? 'Desconhecido',
             'ip_address'   => $data['ip_address'] ?? "ip não enviado",
+            'cpu'          => $data['cpu'] ?? null,
+            'ram'          => $data['ram'] ?? null,
+            'storage'      => $data['storage'] ?? null,
+            'disk_type'    =>$data['disk_type'] ?? null,
             'last_seen_at' => now(),
         ];
 

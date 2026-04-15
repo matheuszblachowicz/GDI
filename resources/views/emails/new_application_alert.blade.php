@@ -8,8 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="x-apple-disable-message-reformatting">
-    <title>Alerta de Segurança PlatID</title>
-    
+    <title>Alerta de Segurança PlatID</title>  
     <style>
         body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
         table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
@@ -62,7 +61,7 @@
                     <hr style="border: none; border-top: 1px solid #cbd5e1; margin-top: 40px; margin-bottom: 25px;">
                     
                     <p style="font-size: 14px; color: #64748b; margin: 0; font-weight: 500;">
-                        Caso suspeite tratar-se de um software malicioso ou não homologado, verifique a estação e aplique a política de bloqueio se necessário.
+                        Caso suspeite tratar-se de um software malicioso ou não homologado, verifique a maquina e caso necessario aplique a politica de bloqueio.
                     </p>
                 </td>
             </tr>
@@ -79,7 +78,6 @@
         </table>
 
         <div style="max-width: 600px; margin: 0 auto; padding-bottom: 40px;"></div>
-
     </center>
 </body>
 </html>
