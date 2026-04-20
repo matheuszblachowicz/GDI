@@ -238,7 +238,7 @@
                     <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 py-2 rounded-xl transition-all h-[42px] flex items-center shadow-sm">Filtrar</button>
                     
                     @if(request('activity_search') || request('activity_start') || request('activity_end'))
-                        <a href="{{ route('admin.devices.show', ['device' => $device->id, 'tab' => 'activity']) }}" class="bg-slate-200 hover:bg-slate-300 text-slate-600 font-black px-4 py-2 rounded-xl transition-all h-[42px] flex items-center">Limpar</a>
+                        <a href="{{ route('admin.devices.show', ['id' => $device->id, 'tab' => 'activity']) }}" class="bg-slate-200 hover:bg-slate-300 text-slate-600 font-black px-4 py-2 rounded-xl transition-all h-[42px] flex items-center">Limpar</a>
                     @endif
                 </div>
             </form>

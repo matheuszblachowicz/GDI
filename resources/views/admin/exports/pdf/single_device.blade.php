@@ -168,7 +168,7 @@
                 <div class="hw-item">
                     <span class="hw-label">Status VIP / Privilégios</span>
                     <span class="hw-value">
-                        @if($isVip)
+                        @if($device->is_vip)
                             <span class="badge bg-amber">Usuário VIP</span>
                         @else
                             Usuário Padrão
